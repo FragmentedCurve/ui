@@ -95,7 +95,9 @@ Event GetEvent() {
 	XNextEvent(display, &xevent);
 	auto event = XEventToEvent(xevent);
 
-	switch (event) {
+	// TODO: Optimize this so NONE events aren't returned.
+
+        switch (event) {
         case MOUSE_LEFT:
         case MOUSE_RIGHT: {
                 pointer.x = xevent.xbutton.x;
