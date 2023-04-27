@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
         { // Initialize event listening
                 Atom del_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
                 XSetWMProtocols(display, main_window, &del_window, 1);
-                XSelectInput(display, main_window, ExposureMask | ButtonPressMask  | KeyPressMask);
+                XSelectInput(display, main_window, ExposureMask | ButtonPressMask | KeyPressMask);
         }
 
         { // Setup Shm for quick rendering
