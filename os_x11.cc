@@ -153,8 +153,7 @@ int main(int argc, char** argv) {
                 } else {
                         // TODO: Use slow XPutImage.
 			fprintf(stderr, "XShm not available.\n");
-			status = -1;
-			goto error;
+			exit(1);
                 }
         }
 	
@@ -164,7 +163,6 @@ int main(int argc, char** argv) {
 	// Run Pixel Grab
         status = AppMain(argc, argv);
 
-error:
 	// Cleanup
 	XShmDetach(display, &shmseg);
 	XDestroyWindow(display, main_window);
