@@ -1,8 +1,10 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -13,14 +15,15 @@
 static Display* display;
 static Window main_window;
 static XImage* image;
+static const char* clipboard_text;
 
 void Console(const char* s) {
 	printf("%s", s);
 }
 
 void ToClipboard(const char* s) {
-	// TODO: Implement, this is just a stub right now.
-	//printf("Clipboard: %s\n", s);
+	clipboard_text = s;
+	XSetSelectionOwner(display, XA_PRIMARY, main_window, CurrentTime);
 }
 
 void GrabMouse() {
@@ -60,6 +63,38 @@ int PendingEvents() {
 	return XPending(display); 
 }
 
+static void FillSelectionRequest(XEvent event) {
+	Atom targets[] = {
+		XInternAtom(display, "TARGETS", false),
+		XA_STRING,
+		XInternAtom(display, "UTF8_STRING", false)
+	};
+
+	XSelectionEvent e = {
+		.type = SelectionNotify,
+		.display = display,
+		.requestor = event.xselectionrequest.requestor,
+		.selection = event.xselectionrequest.selection,
+		.target = event.xselectionrequest.target,
+		.property = event.xselectionrequest.property ? event.xselectionrequest.property	: XA_PRIMARY,
+		.time = event.xselectionrequest.time
+	};
+
+	if (e.target == targets[0]) {
+		XChangeProperty(display, e.requestor, e.property,
+				e.target, 8, PropModeReplace,
+				(const unsigned char *)targets,
+				sizeof(targets));
+	} else if (e.target == targets[1] || e.target == targets[2]) {
+		XChangeProperty(display, e.requestor, e.property,
+				e.target, 8, PropModeReplace,
+				(const unsigned char *)clipboard_text,
+				strlen(clipboard_text));
+	}
+
+	XSendEvent(display, e.requestor, false, 0,(XEvent *)&e);
+}
+
 static Event XEventToEvent(XEvent event) {
         switch (event.type) {
         case ClientMessage:
@@ -76,6 +111,9 @@ static Event XEventToEvent(XEvent event) {
 		return MOUSE_MOVE;
         case KeyPress:
 		return KEY_PRESS;
+        case SelectionRequest:
+		FillSelectionRequest(event);
+		return NONE;
         }
 
         return NONE;
