@@ -1,9 +1,9 @@
 #include "os.h"
 #include "ui.h"
 
-#include "font.h"
+#include <cstdlib> // TODO: This is for exit(). Remove later.
 
-bool scan_mode = false;
+bool mouse_buttons[] = {false, false};
 Point pointer; // Updated from MOUSE_MOVE or MOUSE_CLICK.
 Pixel* screen; // Set by the platform.
 
@@ -11,137 +11,83 @@ Pixel* screen; // Set by the platform.
 int PIXEL_ZOOM = 16; 
 const int SCAN_HEIGHT = 25;
 const int SCAN_WIDTH = SCAN_HEIGHT * PHI;
-const int SCREEN_HEIGHT =  PIXEL_ZOOM * SCAN_HEIGHT;
+const int GRID_HEIGHT = PIXEL_ZOOM * SCAN_HEIGHT;
+const int SCREEN_HEIGHT = PIXEL_ZOOM * SCAN_HEIGHT + 50;
 const int SCREEN_WIDTH = PIXEL_ZOOM * SCAN_WIDTH;
-
-extern Pixel* splash;
 
 #define newline() Console("\n")
 
+auto p_panel = Point(5, SCREEN_HEIGHT - 40 - 5);
+
+bool scan_mode = false;
+
+Widget *wstack[] = {
+	new HexFloat(p_panel.From(100, 0).From(110, 0).From(210, 5)),
+	new UIToggle(p_panel, 100, 40),
+	new UIToggle(p_panel.From(110, 0), 100, 40),
+	new UIButton(p_panel.From(220, 0), 100, 40),
+	new UIPixelScanner(Point(0, 0), SCREEN_WIDTH, GRID_HEIGHT, PIXEL_ZOOM),
+};
+
+static void callback_exit(Widget *w, Event e) {
+	exit(0);
+}
+
+static void callback_select_pixel(Widget *w, Event e) {
+	auto grid = (UIPixelScanner*) w;
+	auto hf = (HexFloat*) wstack[0];
+	auto toggle = (UIToggle*) wstack[1];
+
+	scan_mode = grid->ScanMode();
+        if (!scan_mode) {
+		//Console(hf->color_s);
+		//newline();
+		ToClipboard(hf->color_s);
+		toggle->Off();
+        }
+	hf->Set(grid->Get());
+}
+
+static void callback_scan(Widget *w, Event e) {
+	auto b = (UIToggle*) w;
+	auto grid = (UIPixelScanner*) wstack[4];
+	
+	b->Toggle();
+	grid->Toggle();
+}
+
 // Skip reporting motion events to avoid wasted drawing.
 static void SkipMotionQueue() {
-	while (PeekEvent() == MOUSE_MOVE && PendingEvents() > 1)
+	while (PeekEvent() == EVENT_MOUSE_MOVE && PendingEvents() > 1)
 		GetEvent();
-}
-
-void ToString(Pixel c, char buf[8]) {
-	const char* hexmap = "0123456789abcdef";
-
-	// Remove bytes that aren't RGB
-	c &= 0x00ffffff;
-
-	// Initialize string to "#000000"
-	((int*)buf)[0] = *((int*)"#000");
-	((int*)buf)[1] = *((int*)"000");
-	
-	buf = buf + 6;
-
-        while (c) {
-                *buf = hexmap[c % 0x10];
-                c /= 0x10;
-		buf--;
-        }
-}
-
-// TODO: Clean this up. It was quickly hacked out just to make it work.
-static void DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0) {
-	auto zoom = 2;
-        for (int i = 0; i < len; i++) {
-		auto x = x0 + zoom * (i % 3);
-		auto y = y0 + zoom * (i / 3);
-
-                if (gylph[i])
-			scr->DrawFill(BLACK, Point(x, y), Point(x + zoom, y + zoom));
-        }
 }
 
 int AppMain(int argc, char **argv) {
 	Event e;
 
-	char color_s[8];
-	
 	auto scr = new Screen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
-	auto grid = new PixelGrid(Point(0, 0), SCREEN_WIDTH, SCREEN_HEIGHT, PIXEL_ZOOM);
-
-	// Clear 
-	((int*)color_s)[0] = 0;
-	((int*)color_s)[1] = 0;
 	
-        // White out the window
-	scr->DrawFill(WHITE, Point(0, 0), Point(scr->xw, scr->yw));
-        //UpdateWindow();
+        { // Draw cool squares in lower right corner.
+		auto p = Point(SCREEN_WIDTH - 5, SCREEN_HEIGHT - 5);
+		scr->DrawFill(0xdedbde, Point(0, 0), Point(SCREEN_WIDTH, SCREEN_HEIGHT));
+		scr->DrawFill(BLACK, p.From(-10, -10), p);
+		scr->DrawRect(BLACK, p.From(-11, 0).From(-10, -10), p.From(-11, 0));
+		scr->DrawRect(BLACK, p.From(0, -11).From(-10, -10), p.From(0, -11));
+        }
+	
+        wstack[1]->callback = callback_scan;
+        wstack[3]->callback = callback_exit;
+	wstack[4]->callback = callback_select_pixel;
 
-	// Initialize with #FFFFFF
-	ToString(WHITE, color_s);
-
-	// Draw splash screen
-        for (int i = 0; i < SCREEN_WIDTH * SCREEN_HEIGHT; i++)
-		scr->pixels[i] = splash[i];
-        
-        while ((e = GetEvent()) != QUIT) {
-                switch (e) {
-                case MOUSE_MOVE: {
-			// We're not scanning the screen right now
-			if (!scan_mode)
-				break;
-
-			// Avoid costly drawing that won't be seen
+        while ((e = GetEvent()) != EVENT_QUIT) {
+		if (scan_mode)
 			SkipMotionQueue();
-
-			grid->Scan();
-			grid->Draw(scr);
-
-			// Update the pixel value as we're scanning
-			// the screen
-			ToString(grid->Get(), color_s);
-                } break;
-
-                case MOUSE_RIGHT: {
-                        if (!scan_mode) {
-                                GrabMouse();
-                                scan_mode = true;
-                        }
-                } break;
-
-                case MOUSE_LEFT: {
-                        if (scan_mode) {
-                                ReleaseMouse();
-                                ToString(grid->Get(), color_s);
-				ToClipboard(color_s);
-				Console(color_s);
-				newline();
-                                scan_mode = false;
-                        } else {
-                                grid->Click(pointer.x, pointer.y);
-                                grid->Draw(scr);
-				ToString(grid->Get(), color_s);
-				ToClipboard(color_s);
-				Console(color_s);
-				newline();
-                        }
-                } break;
-
-                case KEY_PRESS: {
-			ReleaseMouse();
-			scan_mode = false;
-                } break;
-                }
-
-		// TODO: Clean this up. It was quickly hacked out just to make it work.
-		scr->DrawFill(0x2e2e2e, Point(0,0), Point(48 + 25 + 2, 25 + 2));
-		scr->DrawFill(WHITE, Point(0,0), Point(48 + 25, 25));
-                for (int i = 1; i < (int) sizeof(color_s) - 1; i++) {
-			int c = color_s[i] - '0';
-			if (color_s[i] >=  'a')
-				c = color_s[i] - 'a' + 0xa;
-                        DrawFont(scr, gylphs[c], sizeof(gylphs[c]), 5 + 8 * i, 5);
-                }
-
+		UIDelegate(e, wstack, NUMBER_OF(Widget*, wstack));
+		UIDraw(scr, wstack, NUMBER_OF(Widget*, wstack));
 		UpdateWindow();
         }
 
 	delete scr;
-	delete grid;
 	
 	return 0;
 }

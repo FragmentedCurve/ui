@@ -12,9 +12,11 @@ Screen::Screen(uint32_t* pixels, int xw, int yw) {
 	this->pixels = pixels;
 }
 
+#include <cstring>
+
 void Screen::DrawHLine(Pixel c, Point p, int width) {
   	// Completely off the screen
-	if (p.x > xw || p.y < 0 || p.y > xw)
+	if (p.x >= xw || p.y < 0 || p.y >= yw)
 		return;
 
 	// Clip top
@@ -33,7 +35,7 @@ void Screen::DrawHLine(Pixel c, Point p, int width) {
 
 void Screen::DrawVLine(Pixel c, Point p, int height) {
 	// Completely off the screen
-	if (p.y > yw || p.x < 0 || p.x > xw)
+	if (p.y >= yw || p.x < 0 || p.x >= xw)
 		return;
 
 	// Clip top
@@ -56,4 +58,14 @@ void Screen::DrawFill(Pixel c, Point p0, Point p1) {
 
 	while (--yw >= 0)
 		DrawHLine(c, Point(p0.x, p0.y + yw), xw);
+}
+
+void Screen::DrawRect(Pixel c, Point p0, Point p1) {
+	auto h_width = p1.x - p0.x;
+	auto v_height = p1.y - p0.y;
+
+	DrawHLine(c, p0, h_width); // Top
+	DrawHLine(c, Point(p0.x, p1.y - 1), h_width); // Bottom
+	DrawVLine(c, p0, v_height); // Left
+	DrawVLine(c, Point(p1.x - 1, p0.y), v_height);
 }

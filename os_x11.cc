@@ -19,6 +19,7 @@ static const char* clipboard_text;
 
 void Console(const char* s) {
 	printf("%s", s);
+	fflush(stdout);
 }
 
 void ToClipboard(const char* s) {
@@ -50,7 +51,8 @@ Pixel GetPixel(int x, int y) {
 			AllPlanes, ZPixmap);
 	Pixel pixel = XGetPixel(i, 0, 0);
 	XDestroyImage(i);
-	return pixel;
+
+        return pixel;
 }
 
 void UpdateWindow() {
@@ -99,24 +101,36 @@ static Event XEventToEvent(XEvent event) {
         switch (event.type) {
         case ClientMessage:
 		// Assume the window was closed.
-		return QUIT;
+		return EVENT_QUIT;
         case ButtonPress:
 		if (event.xbutton.button == 1)
-			return MOUSE_LEFT;
+			mouse_buttons[0] = true;
 		else if (event.xbutton.button == 3)
-			return MOUSE_RIGHT;
-		else
-			return NONE;
+			mouse_buttons[1] = true;
+		pointer.x = event.xbutton.x;
+                pointer.y = event.xbutton.y;
+		return EVENT_MOUSE_BUTTON;
+	case ButtonRelease:
+		// FIXME: mouse_buttons[0] gets stuck set to true.
+		if (event.xbutton.button == 1)
+			mouse_buttons[0] = false;
+		else if (event.xbutton.button == 3)
+			mouse_buttons[1] = false;
+		pointer.x = event.xbutton.x;
+                pointer.y = event.xbutton.y;
+		return EVENT_MOUSE_BUTTON;
         case MotionNotify:
-		return MOUSE_MOVE;
+		pointer.x = event.xmotion.x;
+                pointer.y = event.xmotion.y;
+		return EVENT_MOUSE_MOVE;
         case KeyPress:
-		return KEY_PRESS;
+		return EVENT_KEY_PRESS;
         case SelectionRequest:
 		FillSelectionRequest(event);
-		return NONE;
+		return EVENT_NULL;
         }
 
-        return NONE;
+        return EVENT_NULL;
 }
 
 Event PeekEvent() {
@@ -131,23 +145,7 @@ Event PeekEvent() {
 Event GetEvent() {
 	XEvent xevent;
 	XNextEvent(display, &xevent);
-	auto event = XEventToEvent(xevent);
-
-	// TODO: Optimize this so NONE events aren't returned.
-
-        switch (event) {
-        case MOUSE_LEFT:
-        case MOUSE_RIGHT: {
-                pointer.x = xevent.xbutton.x;
-                pointer.y = xevent.xbutton.y;
-        } break;
-        case MOUSE_MOVE: {
-                pointer.x = xevent.xmotion.x;
-                pointer.y = xevent.xmotion.y;
-        } break;
-        }
-
-	return event;
+	return XEventToEvent(xevent);
 }
 
 int main(int argc, char** argv) {
@@ -171,7 +169,7 @@ int main(int argc, char** argv) {
         { // Initialize event listening
                 Atom del_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
                 XSetWMProtocols(display, main_window, &del_window, 1);
-                XSelectInput(display, main_window, ExposureMask | ButtonPressMask | KeyPressMask);
+                XSelectInput(display, main_window, ExposureMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask | KeyPressMask);
         }
 
         { // Setup Shm for quick rendering
