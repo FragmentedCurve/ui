@@ -204,7 +204,6 @@ void HexFloat::Draw(Screen* scr) {
 	// TODO: Clean this up. It was quickly hacked out just to make it work.
 	scr->DrawFill(UI_TEXT_BG, pos, pos.From(xw, yw));
 	scr->DrawRect(UI_TEXT_BORDER, pos, pos.From(xw, yw));
-	scr->DrawRect(UI_SURFACE_FG, pos.From(1, 1), pos.From(xw - 1, yw - 1));
 	
 	for (int i = 1; i < (int)sizeof(color_s) - 1; i++) {
 		int c = color_s[i] - '0';
