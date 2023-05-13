@@ -14,49 +14,27 @@ typedef uint32_t Pixel;
 #define INVERT_PIXEL(c) ((WHITE ^ (c)) | RED)
 
 enum Event {
-	EVENT_NULL,         // Who knows?
-	EVENT_QUIT,         // Quit message from WM
-	EVENT_RESIZE,
-	EVENT_MOUSE_LEFT,   // Left button released
-	EVENT_MOUSE_RIGHT,  // Right button released
-	EVENT_MOUSE_LPRESS, // Left button pressed
-	EVENT_MOUSE_RPRESS, // Right button pressed
-	EVENT_MOUSE_BUTTON, // A mouse button was either pressed or released
-	EVENT_MOUSE_MOVE,   // You figure this one out
-	EVENT_KEY_PRESS,    // Any key was pressed
-	EVENT_KEY_RELEASE,  // Any key was released
+	EVENT_NULL,           // Who knows?
+	EVENT_QUIT,           // Quit message from WM
+	EVENT_RESIZE,         // Screen/Window was resized
+	EVENT_MOUSE_BUTTON,   // A mouse button was either pressed or released
+	EVENT_MOUSE_MOVE,     // You figure this one out
+	EVENT_KEY_PRESS,      // Any key was pressed
+	EVENT_KEY_RELEASE,    // Any key was released
+	EVENT_UPDATE_WINDOW,  // UpdateWindow() should be called
 	
+	/* TODO
+	   Add events for
+
+	   - Updating the window (basically call UpdateWindow()).
+	   - Screen/window resized.
+	   - Redraw part of the screen.
+	*/
+	   
 	// --
 	
 	EVENT_LAST
 };
-
-enum EventStyle { ESTYLE_UNHANDLED, ESTYLE_CHAINED, ESTYLE_ABSORBED };
-
-static EventStyle event_style(Event e) {
-	switch (e) {
-	// Absorbed events
-	case EVENT_KEY_PRESS:
-	case EVENT_KEY_RELEASE: 
-	case EVENT_MOUSE_LEFT:
-	case EVENT_MOUSE_RIGHT:
-	case EVENT_MOUSE_LPRESS:
-	case EVENT_MOUSE_RPRESS:
-	case EVENT_MOUSE_MOVE:
-	case EVENT_MOUSE_BUTTON:
-		return ESTYLE_ABSORBED;
-
-	// Chained events
-	case EVENT_RESIZE:
-		return ESTYLE_CHAINED;
-
-	// Unhandled events
-	case EVENT_NULL:
-	case EVENT_QUIT:
-	default:
-		return ESTYLE_UNHANDLED;
-	}
-}
 
 #define NUMBER_OF(type, array) (sizeof(array)/sizeof(type))
 
@@ -80,6 +58,8 @@ struct Point {
 #ifndef NULL
 #define NULL 0
 #endif
+
+#define UNUSED(var) (void) var;
 
 #define WINDOW_TITLE "PixelGrab"
 

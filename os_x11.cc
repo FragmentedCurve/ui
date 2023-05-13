@@ -17,7 +17,7 @@ static Window main_window;
 static XImage* image;
 static const char* clipboard_text;
 
-void Console(const char* s) {
+void Console(const char *s) {
 	printf("%s", s);
 	fflush(stdout);
 }
@@ -107,17 +107,24 @@ static Event XEventToEvent(XEvent event) {
 			mouse_buttons[0] = true;
 		else if (event.xbutton.button == 3)
 			mouse_buttons[1] = true;
+		else
+			return EVENT_NULL;
+		
 		pointer.x = event.xbutton.x;
                 pointer.y = event.xbutton.y;
+		
 		return EVENT_MOUSE_BUTTON;
 	case ButtonRelease:
-		// FIXME: mouse_buttons[0] gets stuck set to true.
 		if (event.xbutton.button == 1)
 			mouse_buttons[0] = false;
 		else if (event.xbutton.button == 3)
 			mouse_buttons[1] = false;
+		else
+			return EVENT_NULL;
+		
 		pointer.x = event.xbutton.x;
                 pointer.y = event.xbutton.y;
+		
 		return EVENT_MOUSE_BUTTON;
         case MotionNotify:
 		pointer.x = event.xmotion.x;
@@ -128,6 +135,8 @@ static Event XEventToEvent(XEvent event) {
         case SelectionRequest:
 		FillSelectionRequest(event);
 		return EVENT_NULL;
+	case Expose:
+		return EVENT_UPDATE_WINDOW;
         }
 
         return EVENT_NULL;
@@ -169,7 +178,7 @@ int main(int argc, char** argv) {
         { // Initialize event listening
                 Atom del_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
                 XSetWMProtocols(display, main_window, &del_window, 1);
-                XSelectInput(display, main_window, ExposureMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask | KeyPressMask);
+                XSelectInput(display, main_window, ExposureMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask | KeyPressMask | KeyReleaseMask);
         }
 
         { // Setup Shm for quick rendering

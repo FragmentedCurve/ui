@@ -37,10 +37,10 @@ enum UIColors {
 // TODO: Change "EVENT_" prefix and reduce to only 2 results.
 //enum EventOutcome { EVENT_UNHANDLED, EVENT_PROCESSED, EVENT_ABSORBED };
 
-struct Widget {
-        Widget() {}
+struct UIWidget {
+        UIWidget() {}
 	
-        Widget(Point pos, int xw, int yw) {
+        UIWidget(Point pos, int xw, int yw) {
 		this->pos = pos;
 		this->xw = xw;
 		this->yw = yw;
@@ -67,12 +67,12 @@ struct Widget {
 	int xw = 0, yw = 0;
 	bool paint = true;
 	bool visible = true;
-        void (*callback)(Widget *, Event e) = NULL;
-        bool handle_events[EVENT_LAST] = {0};
+        void (*callback)(UIWidget*, Event, void*) = NULL;
+        //bool handle_events[EVENT_LAST] = {0};
 };
 
-struct UILight : Widget {
-        UILight(Point position) : Widget(position, 16, 16) {}
+struct UILight : UIWidget {
+        UILight(Point position) : UIWidget(position, 16, 16) {}
 	virtual void Draw(Screen* scr);
         void On() { on = true; }
         void Off() { on = false; }
@@ -83,11 +83,8 @@ private:
 	bool on = false;
 };
 
-struct UIButton : Widget {
-        UIButton(Point position, int xw, int yw) : Widget(position, xw, yw) {
-		handle_events[EVENT_MOUSE_BUTTON] =
-		handle_events[EVENT_MOUSE_MOVE]   = true;
-	}
+struct UIButton : UIWidget {
+        UIButton(Point position, int xw, int yw) : UIWidget(position, xw, yw) {}
 	
 	void Draw(Screen* scr);
 	virtual bool Handle(Event e);
@@ -114,9 +111,10 @@ struct UIToggle : UIButton {
 
 	// TODO: Should this default callback exist? Maybe just let
 	// the user define the callback.
-        static void default_callback(Widget *w, Event e) {
+        static void default_callback(UIWidget *w, Event e, void* data) {
                 auto toggle = (UIToggle *)w;
                 toggle->Toggle();
+		(void) data;
         }
 
 private:
@@ -124,7 +122,7 @@ private:
 	UILight light;
 };
 
-struct UIPixelGrid : Widget {
+struct UIPixelGrid : UIWidget {
         UIPixelGrid(Point position, int xw, int yw , int zoom);
         virtual ~UIPixelGrid();
 	void Draw(Screen* scr);
@@ -161,7 +159,9 @@ private:
 struct UIPixelScanner : UIPixelSelector {
         UIPixelScanner(Point position, int xw, int yw, int zoom)
 		: UIPixelSelector(position, xw, yw, zoom) {}
-	void Toggle();
+	bool Toggle();
+	void On(); // TODO: Implement.
+	void Off(); // TODO: Implement.
         bool ScanMode() { return scan_mode; }
         virtual bool Handle(Event e);
 	virtual void Draw(Screen* scr);
@@ -171,9 +171,9 @@ private:
 	bool scan_mode = false;
 };
 
-struct HexFloat : Widget {
-        HexFloat() : Widget(Point(0, 0), 48 + 25 + 2, 25 + 2) { Set(WHITE); }
-	HexFloat(Point p) : Widget(p, 48 + 25 + 2, 25 + 2) { Set(WHITE); }
+struct HexFloat : UIWidget {
+        HexFloat() : UIWidget(Point(0, 0), 48 + 25 + 2, 25 + 2) { Set(WHITE); }
+	HexFloat(Point p) : UIWidget(p, 48 + 25 + 2, 25 + 2) { Set(WHITE); }
 	void Draw(Screen* scr);
 	void Set(Pixel c);
 	
@@ -183,11 +183,11 @@ private:
 	void DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0);
 };
 
-void UIDelegate(Event e, Widget* w[], int n);
-void UIDraw(Screen *scr, Widget *w[], int n);
+void UIDelegate(Event e, UIWidget* w[], int n);
+void UIDraw(Screen *scr, UIWidget *w[], int n);
 
-void SetOwner(Widget* w, ...);
-void ReleaseOwner(Widget* w);
-void ReleaseOwner(Widget* w, int e, ...);
+void SetOwner(UIWidget* w, ...);
+void ReleaseOwner(UIWidget* w);
+void ReleaseOwner(UIWidget* w, int e, ...);
 
 #endif // _UI_H_

@@ -8,14 +8,34 @@
 #include <cstdarg>
 #include <cassert>
 
-Widget *event_owner[EVENT_LAST] = {0};
+/*
+  TODO
 
-void SetOwner(Widget *w, Event e) {
+  - Smooth out how a widget gets drawn. Depending on the this->paint
+    bool feels sketchy but it might be good enough.
+
+  - Make gaining ownership of an event more robust and safe.
+
+  - Provide more consistency across widget classes. For example, if a
+    widget has a toggle state, provide the same interface for toggling
+    across all toggle-capable widgets.
+
+  - Write helper functions and macros for common tasks performed by
+    widgets.
+
+  - Bitmap drawing and manipulation.
+
+  - Builtin fonts.
+ */
+
+UIWidget *event_owner[EVENT_LAST] = {0};
+
+void SetOwner(UIWidget *w, Event e) {
 	assert(event_owner[e] == NULL || event_owner[e] == w);
 	event_owner[e] = w;
 }
 
-void SetOwner(Widget* w, ...) {
+void SetOwner(UIWidget* w, ...) {
 	// Event gets promated to int when passed as a variadic
 	// argument.
 	int e;
@@ -30,18 +50,18 @@ void SetOwner(Widget* w, ...) {
 }
 
 
-void ReleaseOwner(Widget* w) {
+void ReleaseOwner(UIWidget* w) {
 	for (int i = 0; i < EVENT_LAST; i++)
 		if (event_owner[i] == w)
 			event_owner[i] = NULL;
 }
 
-void ReleaseOwner(Widget *w, Event e) {
+void ReleaseOwner(UIWidget *w, Event e) {
         assert(event_owner[e] == NULL || event_owner[e] == w);
         event_owner[e] = NULL;
 }
 
-void ReleaseOwner(Widget* w, int e, ...) {
+void ReleaseOwner(UIWidget* w, int e, ...) {
 	// Event gets promated to int when passed as a variadic
 	// argument.
 	va_list ap;
@@ -61,7 +81,7 @@ void ReleaseOwner(Widget* w, int e, ...) {
 #define RELEASE_OWNER(...) ReleaseOwner(this, __VA_ARGS__, EVENT_NULL)
 
 /*
-bool Widget::CaptureMouse(Event e) {
+bool UIWidget::CaptureMouse(Event e) {
         if (e != EVENT_MOUSE_BUTTON)
                 return false;
 
@@ -81,7 +101,11 @@ bool Widget::CaptureMouse(Event e) {
 }
 */
 
-void UIDelegate(Event e, Widget* w[], int n) {
+void UIDelegate(Event e, UIWidget* w[], int n) {
+	// Catch programming mistakes.
+	assert(e != EVENT_NULL);
+	assert(e != EVENT_LAST);
+	
 	// If the event has an owner, ignore normal processing and
 	// delegate directly to the owner.
 	if (event_owner[e]) {
@@ -89,21 +113,16 @@ void UIDelegate(Event e, Widget* w[], int n) {
 		return;
 	}
 
-	auto style = event_style(e);
-	
-	if (style == ESTYLE_UNHANDLED)
-		return;
-
         for (int i = 0; i < n; i++) {		
 		bool result = w[i]->Handle(e);
 		// If event style is chaining, continue through the
 		// loop.
-		if (result == HANDLED_SUCCESS && style == ESTYLE_ABSORBED)
+		if (result == HANDLED_SUCCESS)
 			return;
 	}
 }
 
-void UIDraw(Screen *scr, Widget *w[], int n) {
+void UIDraw(Screen *scr, UIWidget *w[], int n) {
         for (int i = 0; i < n; i++) {
 		w[i]->Draw(scr);
         }
@@ -162,6 +181,8 @@ void HexFloat::Set(Pixel c) {
                 c /= 0x10;
 		buf--;
         }
+
+	paint = true;
 }
 
 // TODO: Clean this up. It was quickly hacked out just to make it work.
@@ -177,9 +198,13 @@ void HexFloat::DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0) {
 }
 
 void HexFloat::Draw(Screen* scr) {
+	if (!paint)
+		return;
+	
 	// TODO: Clean this up. It was quickly hacked out just to make it work.
 	scr->DrawFill(UI_TEXT_BG, pos, pos.From(xw, yw));
 	scr->DrawRect(UI_TEXT_BORDER, pos, pos.From(xw, yw));
+	scr->DrawRect(UI_SURFACE_FG, pos.From(1, 1), pos.From(xw - 1, yw - 1));
 	
 	for (int i = 1; i < (int)sizeof(color_s) - 1; i++) {
 		int c = color_s[i] - '0';
@@ -187,6 +212,8 @@ void HexFloat::Draw(Screen* scr) {
 			c = color_s[i] - 'a' + 0xa;
 		DrawFont(scr, gylphs[c], sizeof(gylphs[c]), pos.x + (5 + 8 * i), pos.y + 8);
 	}
+
+	paint = false;
 }
 
 void UIButton::Draw(Screen *scr) {
@@ -231,7 +258,7 @@ bool UIButton::Handle(Event e) {
 			ReleaseOwner(this);
                         pressed = false;
                         if (callback)
-				callback(this, e);
+				callback(this, e, NULL);
                 }
 		return HANDLED_SUCCESS;
         } else {
@@ -247,7 +274,7 @@ bool UIButton::Handle(Event e) {
         return HANDLED_FAILURE;
 }
 
-UIPixelGrid::UIPixelGrid(Point position, int xw, int yw, int zoom) : Widget(position, xw, yw) {
+UIPixelGrid::UIPixelGrid(Point position, int xw, int yw, int zoom) : UIWidget(position, xw, yw) {
 	cols = xw / zoom;
 	rows = yw / zoom;
 	this->zoom = zoom;
@@ -265,11 +292,10 @@ Point UIPixelGrid::CellPosition(int x, int y) {
 	return p0;
 }
 
-
 void UIPixelGrid::Draw(Screen *scr) {
 	if (!paint)
 		return;
-  
+	
         for (int i = 0; i < cols; i++)
                 for (int j = 0; j < rows; j++)
                         DrawCell(scr, i, j);
@@ -287,7 +313,7 @@ void UIPixelGrid::DrawCell(Screen* scr, int x, int y) {
 	auto p0 = CellPosition(x, y);
 	auto p1 = p0.From(zoom, zoom);
 	
-	// Fill square
+        // Fill square
 	scr->DrawFill(pixels[INDEX(cols, x, y)], p0, p1);
 	
 	// Draw border
@@ -343,6 +369,10 @@ bool UIPixelSelector::Handle(Event e) {
 	if (e != EVENT_MOUSE_BUTTON && e != EVENT_MOUSE_MOVE)
 		return HANDLED_FAILURE;
 
+	// Ignore left click if we're not already engaged.
+	if (!pressed && !Hit(pointer))
+		return HANDLED_FAILURE;
+	
 	// Filter for left click only
 	if (!mouse_buttons[0] && !pressed)
 		return HANDLED_FAILURE;
@@ -373,7 +403,7 @@ bool UIPixelSelector::Handle(Event e) {
 	// Only callback when left click is released
 	//if (callback && !pressed)
 	if (callback)
-		callback(this, e);
+		callback(this, e, NULL);
 	
 	return HANDLED_SUCCESS;
 }
@@ -392,7 +422,7 @@ void UIPixelSelector::Draw(Screen *scr) {
 }
 
 
-void UIPixelScanner::Toggle() {
+bool UIPixelScanner::Toggle() {
 	scan_mode = !scan_mode;
 
         if (scan_mode) {
@@ -402,6 +432,8 @@ void UIPixelScanner::Toggle() {
 		ReleaseMouse();
 		RELEASE_OWNER(EVENT_MOUSE_MOVE, EVENT_MOUSE_BUTTON);
         }
+
+	return scan_mode;
 }
 
 bool UIPixelScanner::Handle(Event e) {
@@ -409,7 +441,7 @@ bool UIPixelScanner::Handle(Event e) {
                 if (e == EVENT_MOUSE_BUTTON && mouse_buttons[0]) {
                         Toggle();
 			if (callback)
-				callback(this, e);
+				callback(this, e, NULL);
 			return HANDLED_SUCCESS;
                 } else if (e == EVENT_MOUSE_MOVE) {
 			Scan();
@@ -421,7 +453,9 @@ bool UIPixelScanner::Handle(Event e) {
 	return UIPixelSelector::Handle(e);
 }
 
-void UIPixelScanner::Draw(Screen *scr) { UIPixelSelector::Draw(scr); }
+void UIPixelScanner::Draw(Screen *scr) {
+	UIPixelSelector::Draw(scr);
+}
 
 void UIPixelScanner::Scan() {
 	auto p = pointer.From(-cols / 2, -rows / 2);
