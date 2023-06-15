@@ -3,8 +3,6 @@
 
 #include "font.h"
 
-#include "common.h" // TODO: REMOVE ME, HERE FOR DEBUGGING
-
 #include <cstdarg>
 #include <cassert>
 
@@ -42,13 +40,12 @@ void SetOwner(UIWidget* w, ...) {
 	va_list ap;
 
 	va_start(ap, w);
-        while ((e = va_arg(ap, int)) != EVENT_NULL) {
+	while ((e = va_arg(ap, int)) != EVENT_NULL) {
 		assert(event_owner[e] == NULL || event_owner[e] == w);
 		event_owner[e] = w;
-        }
+	}
 	va_end(ap);
 }
-
 
 void ReleaseOwner(UIWidget* w) {
 	for (int i = 0; i < EVENT_LAST; i++)
@@ -57,8 +54,8 @@ void ReleaseOwner(UIWidget* w) {
 }
 
 void ReleaseOwner(UIWidget *w, Event e) {
-        assert(event_owner[e] == NULL || event_owner[e] == w);
-        event_owner[e] = NULL;
+	assert(event_owner[e] == NULL || event_owner[e] == w);
+	event_owner[e] = NULL;
 }
 
 void ReleaseOwner(UIWidget* w, int e, ...) {
@@ -70,10 +67,10 @@ void ReleaseOwner(UIWidget* w, int e, ...) {
 	event_owner[e] = NULL;
 
 	va_start(ap, e);
-        while ((e = va_arg(ap, int)) != EVENT_NULL) {
+	while ((e = va_arg(ap, int)) != EVENT_NULL) {
 		assert(event_owner[e] == NULL || event_owner[e] == w);
 		event_owner[e] = NULL;
-        }
+	}
 	va_end(ap);
 }
 
@@ -113,31 +110,40 @@ void UIDelegate(Event e, UIWidget* w[], int n) {
 		return;
 	}
 
-        for (int i = 0; i < n; i++) {		
+	for (int i = 0; i < n; i++) {
+		if (!w[i]->visible)
+			continue;
+
+		if (w[i]->cbHandle) {
+			w[i]->callback(w[i], e, NULL);
+			continue;
+		}
+
+		if ((e == EVENT_MOUSE_BUTTON || e == EVENT_MOUSE_MOVE) && !w[i]->Hit(pointer))
+			continue;
+
 		bool result = w[i]->Handle(e);
-		// If event style is chaining, continue through the
-		// loop.
+
 		if (result == HANDLED_SUCCESS)
 			return;
 	}
 }
 
-void UIDraw(Screen *scr, UIWidget *w[], int n) {
-        for (int i = 0; i < n; i++) {
-		w[i]->Draw(scr);
-        }
+void UIDraw(Screen* scr, UIWidget *w[], int n) {
+	while (--n >= 0)
+		if (w[n]->visible) w[n]->Draw(scr);
 }
 
-void UILight::Draw(Screen *scr) {
+void UILight::Draw(Screen* scr) {
 	scr->DrawFill(on ? UI_LIGHT_ON : UI_LIGHT_OFF, pos.From(2, 2), pos.From(xw - 2, yw - 2));
 
-        if (!on) {
+	if (!on) {
 		// Draw a thick shadow when the light is off.
-                scr->DrawFill((on ? UI_LIGHT_ON : UI_LIGHT_OFF) << 1, pos.From(0, 0), pos.From(xw, 4)); // Left
-                scr->DrawFill((on ? UI_LIGHT_ON : UI_LIGHT_OFF) << 1, pos.From(0, 0), pos.From(4, yw)); // Top
-        }
+		scr->DrawFill((on ? UI_LIGHT_ON : UI_LIGHT_OFF) << 1, pos.From(0, 0), pos.From(xw, 4)); // Left
+		scr->DrawFill((on ? UI_LIGHT_ON : UI_LIGHT_OFF) << 1, pos.From(0, 0), pos.From(4, yw)); // Top
+	}
 
-        // Top hilite
+	// Top hilite
 	scr->DrawHLine(UI_SURFACE_SHADOW, pos.From(0, 0), xw - 1);      // Outer
 	scr->DrawHLine(UI_SURFACE_SHADOW, pos.From(0, 1), xw - 2);      // Inner
 
@@ -154,9 +160,9 @@ void UILight::Draw(Screen *scr) {
 	scr->DrawVLine(UI_SURFACE_HILITE, pos.From(xw - 2, 2), yw - 2); // Inner
 }
 
-void UIToggle::Draw(Screen *scr) {
-        UIButton::Draw(scr);
-        light.Draw(scr);
+void UIToggle::Draw(Screen* scr) {
+	UIButton::Draw(scr);
+	light.Draw(scr);
 }
 
 bool UIToggle::Handle(Event e) {
@@ -176,53 +182,62 @@ void HexFloat::Set(Pixel c) {
 	
 	buf = buf + 6;
 
-        while (c) {
-                *buf = hexmap[c % 0x10];
-                c /= 0x10;
+	while (c) {
+		*buf = hexmap[c % 0x10];
+		c /= 0x10;
 		buf--;
-        }
+	}
 
 	paint = true;
 }
 
 // TODO: Clean this up. It was quickly hacked out just to make it work.
-void HexFloat::DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0) {
+void HexFloat::DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0, Pixel c) {
 	auto zoom = 2;
-        for (int i = 0; i < len; i++) {
+	for (int i = 0; i < len; i++) {
 		auto x = x0 + zoom * (i % 3);
 		auto y = y0 + zoom * (i / 3);
 
-                if (gylph[i])
-			scr->DrawFill(UI_TEXT_FG, Point(x, y), Point(x + zoom, y + zoom));
-        }
+		if (gylph[i])
+			scr->DrawFill(c /*UI_TEXT_FG*/, Point(x, y), Point(x + zoom, y + zoom));
+	}
 }
 
 void HexFloat::Draw(Screen* scr) {
 	if (!paint)
 		return;
-	
+
 	// TODO: Clean this up. It was quickly hacked out just to make it work.
 	scr->DrawFill(UI_TEXT_BG, pos, pos.From(xw, yw));
 	scr->DrawRect(UI_TEXT_BORDER, pos, pos.From(xw, yw));
-	
+
 	for (int i = 1; i < (int)sizeof(color_s) - 1; i++) {
 		int c = color_s[i] - '0';
 		if (color_s[i] >= 'a')
 			c = color_s[i] - 'a' + 0xa;
-		DrawFont(scr, gylphs[c], sizeof(gylphs[c]), pos.x + (5 + 8 * i), pos.y + 8);
+
+		Pixel color;
+		if (i == 1 || i == 2)
+			color = 0xc00000;
+		else if (i == 3 || i == 4)
+			color = 0x00c000;
+		else
+			color = 0xc0;
+
+		DrawFont(scr, gylphs[c], sizeof(gylphs[c]), pos.x + (5 + 8 * i), pos.y + 8, color);
 	}
 
 	paint = false;
 }
 
-void UIButton::Draw(Screen *scr) {
+void UIButton::Draw(Screen* scr) {
 	if (pressed)
 		Draw(scr, UI_SURFACE_SHADOW, UI_SURFACE_HILITE, UI_SURFACE_FG);
 	else
 		Draw(scr, UI_SURFACE_HILITE, UI_SURFACE_SHADOW, UI_SURFACE_BG);
 }
 
-void UIButton::Draw(Screen *scr, Pixel hilite, Pixel shadow, Pixel bg) {
+void UIButton::Draw(Screen* scr, Pixel hilite, Pixel shadow, Pixel bg) {
 	scr->DrawFill(bg, pos, pos.From(xw, yw));
 
 	// Top hilite
@@ -242,35 +257,35 @@ void UIButton::Draw(Screen *scr, Pixel hilite, Pixel shadow, Pixel bg) {
 	scr->DrawVLine(shadow, pos.From(xw - 3, 3), yw - 3); // Inner
 
 	// Border
-	scr->DrawRect(BLACK, pos, pos.From(xw, yw));
+	scr->DrawRect(UI_DARKEST, pos, pos.From(xw, yw));
 }
 
 bool UIButton::Handle(Event e) {
-        if (e != EVENT_MOUSE_BUTTON && e != EVENT_MOUSE_MOVE)
-                return HANDLED_FAILURE;
+	if (e != EVENT_MOUSE_BUTTON && e != EVENT_MOUSE_MOVE)
+		return HANDLED_FAILURE;
 
-        if (Hit(pointer)) {
-                if (!pressed && mouse_buttons[0]) {
+	if (Hit(pointer)) {
+		if (!pressed && mouse_buttons[0]) {
 			pressed = true;
 			SET_OWNER(EVENT_MOUSE_MOVE, EVENT_MOUSE_BUTTON);
-                } else if (pressed && !mouse_buttons[0]) {
+		} else if (pressed && !mouse_buttons[0]) {
 			ReleaseOwner(this);
-                        pressed = false;
-                        if (callback)
+			pressed = false;
+			if (callback)
 				callback(this, e, NULL);
-                }
+		}
 		return HANDLED_SUCCESS;
-        } else {
-                if (pressed && mouse_buttons[0]) {
+	} else {
+		if (pressed && mouse_buttons[0]) {
 			return HANDLED_SUCCESS;
-                } else if (pressed && !mouse_buttons[0]) {
+		} else if (pressed && !mouse_buttons[0]) {
 			ReleaseOwner(this);
 			pressed = false;
 			return HANDLED_SUCCESS;
-                }
-        }
+		}
+	}
 
-        return HANDLED_FAILURE;
+	return HANDLED_FAILURE;
 }
 
 UIPixelGrid::UIPixelGrid(Point position, int xw, int yw, int zoom) : UIWidget(position, xw, yw) {
@@ -278,8 +293,8 @@ UIPixelGrid::UIPixelGrid(Point position, int xw, int yw, int zoom) : UIWidget(po
 	rows = yw / zoom;
 	this->zoom = zoom;
 	pixels = new Pixel[cols * rows];
-        for (int i = 0; i < cols * rows; i++)
-		pixels[i] = WHITE;
+	for (int i = 0; i < cols * rows; i++)
+		pixels[i] = UI_LIGHTEST;
 }
 
 UIPixelGrid::~UIPixelGrid() {
@@ -291,13 +306,13 @@ Point UIPixelGrid::CellPosition(int x, int y) {
 	return p0;
 }
 
-void UIPixelGrid::Draw(Screen *scr) {
+void UIPixelGrid::Draw(Screen* scr) {
 	if (!paint)
 		return;
-	
-        for (int i = 0; i < cols; i++)
-                for (int j = 0; j < rows; j++)
-                        DrawCell(scr, i, j);
+
+	for (int i = 0; i < cols; i++)
+		for (int j = 0; j < rows; j++)
+			DrawCell(scr, i, j);
 
 	paint = false;
 }
@@ -308,27 +323,26 @@ void UIPixelGrid::DrawCell(Screen* scr, int x, int y) {
 	if (x >= cols) x = cols - 1;
 	if (y >= rows) y = rows - 1;
 
-	//auto p0 = pos.From(x * zoom, y * zoom);
 	auto p0 = CellPosition(x, y);
 	auto p1 = p0.From(zoom, zoom);
-	
-        // Fill square
+
+	// Fill square
 	scr->DrawFill(pixels[INDEX(cols, x, y)], p0, p1);
-	
+
 	// Draw border
-	scr->DrawHLine(BLACK, p0, zoom);
-	scr->DrawVLine(BLACK, p0, zoom);
+	scr->DrawHLine(UI_DARKEST, p0, zoom);
+	scr->DrawVLine(UI_DARKEST, p0, zoom);
 
 	if (x == cols - 1)
-		scr->DrawVLine(BLACK, p0.From(zoom - 1, 0), zoom);
+		scr->DrawVLine(UI_DARKEST, p0.From(zoom - 1, 0), zoom);
 	if (y == rows - 1)
-		scr->DrawHLine(BLACK, p0.From(0, zoom - 1), zoom);
+		scr->DrawHLine(UI_DARKEST, p0.From(0, zoom - 1), zoom);
 }
 
-void UIPixelSelector::DrawSelection(Screen *scr) {
+void UIPixelSelector::DrawSelection(Screen* scr) {
 	// Weird inverted color
 	auto c = (0xffffff ^ pixels[INDEX(cols, select.x, select.y)]) | 0xff0000;
-       
+
 	auto p0 = CellPosition(select.x, select.y);
 	auto p1 = p0.From(zoom + 1, zoom + 1);
 
@@ -336,10 +350,10 @@ void UIPixelSelector::DrawSelection(Screen *scr) {
 	auto q1 = p1.From(1, 1);
 
 	// Boundary corrections
-        if (select.x == cols - 1)
+	if (select.x == cols - 1)
 		p1.x = q1.x -= 2;
 
-        if (select.y == rows - 1)
+	if (select.y == rows - 1)
 		p1.y = q1.y -= 2;
 
 	if (select.x == 0)
@@ -347,8 +361,8 @@ void UIPixelSelector::DrawSelection(Screen *scr) {
 
 	if (select.y == 0)
 		q0.y++;
-	
-        scr->DrawRect(c, p0, p1);
+
+	scr->DrawRect(c, p0, p1);
 	scr->DrawRect(c, q0, q1);
 }
 
@@ -371,20 +385,20 @@ bool UIPixelSelector::Handle(Event e) {
 	// Ignore left click if we're not already engaged.
 	if (!pressed && !Hit(pointer))
 		return HANDLED_FAILURE;
-	
+
 	// Filter for left click only
 	if (!mouse_buttons[0] && !pressed)
 		return HANDLED_FAILURE;
 
-        if (mouse_buttons[0] && !pressed) {
+	if (mouse_buttons[0] && !pressed) {
 		// Left button pressed
-                SET_OWNER(EVENT_MOUSE_BUTTON, EVENT_MOUSE_MOVE);
-                pressed = true;
-        } else if (!mouse_buttons[0] && pressed) {
+		SET_OWNER(EVENT_MOUSE_BUTTON, EVENT_MOUSE_MOVE);
+		pressed = true;
+	} else if (!mouse_buttons[0] && pressed) {
 		// Left button released
-                RELEASE_OWNER(EVENT_MOUSE_BUTTON, EVENT_MOUSE_MOVE);
-                pressed = false;
-        }
+		RELEASE_OWNER(EVENT_MOUSE_BUTTON, EVENT_MOUSE_MOVE);
+		pressed = false;
+	}
 
 	auto p = pointer.From(pos);
 	p.x /= zoom;
@@ -399,60 +413,59 @@ bool UIPixelSelector::Handle(Event e) {
 	prev_select = select;
 	select = p;
 
-	// Only callback when left click is released
-	//if (callback && !pressed)
+	// TODO: Should this inly callback when left click is released?
 	if (callback)
 		callback(this, e, NULL);
-	
+
 	return HANDLED_SUCCESS;
 }
 
-void UIPixelSelector::Draw(Screen *scr) {
+void UIPixelSelector::Draw(Screen* scr) {
 	if (!paint) {
-                // Only paint selection
-                EraseSelection(scr);
+		// Only paint selection
+		EraseSelection(scr);
 		DrawSelection(scr);
 		return;
-        }
+	}
 
 	UIPixelGrid::Draw(scr);
 	DrawSelection(scr);
 	paint = false;
 }
 
-
 bool UIPixelScanner::Toggle() {
 	scan_mode = !scan_mode;
 
-        if (scan_mode) {
+	if (scan_mode) {
 		GrabMouse();
 		SET_OWNER(EVENT_MOUSE_MOVE, EVENT_MOUSE_BUTTON);
-        } else {
+	} else {
 		ReleaseMouse();
 		RELEASE_OWNER(EVENT_MOUSE_MOVE, EVENT_MOUSE_BUTTON);
-        }
+	}
 
 	return scan_mode;
 }
 
 bool UIPixelScanner::Handle(Event e) {
-        if (scan_mode) {
-                if (e == EVENT_MOUSE_BUTTON && mouse_buttons[0]) {
-                        Toggle();
+	if (scan_mode) {
+		if (e == EVENT_MOUSE_BUTTON && mouse_buttons[0]) {
+			auto prev_state = scan_mode;
+			Toggle();
 			if (callback)
-				callback(this, e, NULL);
+				callback(this, e, &prev_state);
 			return HANDLED_SUCCESS;
-                } else if (e == EVENT_MOUSE_MOVE) {
+		} else if (e == EVENT_MOUSE_MOVE) {
 			Scan();
 			return HANDLED_SUCCESS;
-                } else {
+		} else {
 			return HANDLED_FAILURE;
-                }
-        }
+		}
+	}
 	return UIPixelSelector::Handle(e);
 }
 
-void UIPixelScanner::Draw(Screen *scr) {
+void UIPixelScanner::Draw(Screen* scr) {
 	UIPixelSelector::Draw(scr);
 }
 
@@ -466,6 +479,6 @@ void UIPixelScanner::Scan() {
 
 			pixels[INDEX(cols, i, j)] = GetPixel(x, y);
 		}
-        }
+	}
 	paint = true;
 }

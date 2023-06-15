@@ -5,14 +5,6 @@
 
 typedef uint32_t Pixel;
 
-#define BLACK ((Pixel)0x000000)
-#define WHITE ((Pixel)0xffffff)
-#define RED   ((Pixel)0xff0000)
-#define GREEN ((Pixel)0x00ff00)
-#define BLUE  ((Pixel)0x0000ff)
-
-#define INVERT_PIXEL(c) ((WHITE ^ (c)) | RED)
-
 enum Event {
 	EVENT_NULL,           // Who knows?
 	EVENT_QUIT,           // Quit message from WM
@@ -22,7 +14,7 @@ enum Event {
 	EVENT_KEY_PRESS,      // Any key was pressed
 	EVENT_KEY_RELEASE,    // Any key was released
 	EVENT_UPDATE_WINDOW,  // UpdateWindow() should be called
-	
+
 	/* TODO
 	   Add events for
 
@@ -30,9 +22,9 @@ enum Event {
 	   - Screen/window resized.
 	   - Redraw part of the screen.
 	*/
-	   
+
 	// --
-	
+
 	EVENT_LAST
 };
 
@@ -42,17 +34,41 @@ enum Event {
 #define HANDLED_SUCCESS true
 
 struct Point {
-	int x, y;
+	int x = 0;
+	int y = 0;
 
-	Point() { y = x = 0; }
+	Point() {}
+	Point(int x, int y): x(x), y(y) {}
 
-	Point(int x, int y) {
-		this->x = x;
-		this->y = y;
-	}
-
+	// TODO: Pick a better name for From.
 	Point From(Point p) { return Point(x + p.x, y + p.y); }
 	Point From(int x, int y) { return From(Point(x, y)); }
+};
+
+struct Rect {
+	Point p;
+	int xw, yw;
+
+	Rect(int x, int y, int xw, int yw) : p(x, y), xw(xw), yw(yw) {}
+	Rect(Point origin, int xw, int yw) : p(origin), xw(xw), yw(yw) {}
+	Rect(Point p0, Point p1) : p(p0), xw(p1.x - p0.x), yw(p1.y - p0.y) {}
+
+	bool Hit(int x, int y) {
+		return (x >= p.x) && (x <= p.x + xw) && (y >= p.y) && (y <= p.y + yw);
+	}
+	bool Hit(Point q) { return Hit(q.x, q.y); }
+
+	bool Boundary(int x, int y) {
+		return (x == p.x || x == p.x + xw) && (y == p.y || y == p.y + yw);
+	}
+	bool Boundary(Point q) { return Boundary(q.x, q.y); }
+
+	int Area() { return xw * yw; }
+	int Perimeter() { return 2 * (xw + yw); }
+
+	// TODO: Should I rename From to Move?
+	Rect From(int x, int y) { return Rect(p.From(x, y), xw, yw); }
+	Rect From(Point q) { return From(q.x, q.y); }
 };
 
 #ifndef NULL

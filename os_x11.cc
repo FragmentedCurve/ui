@@ -45,14 +45,14 @@ Pixel GetPixel(int x, int y) {
 
 	// Return black if out of bounds
 	if (x < 0 || y < 0 || x >= attr.width || y >= attr.height)
-		return BLACK;
-	
+		return Pixel(0);
+
 	XImage *i = XGetImage(display, DefaultRootWindow(display), x, y, 1, 1,
 			AllPlanes, ZPixmap);
 	Pixel pixel = XGetPixel(i, 0, 0);
 	XDestroyImage(i);
 
-        return pixel;
+	return pixel;
 }
 
 void UpdateWindow() {
@@ -98,21 +98,21 @@ static void FillSelectionRequest(XEvent event) {
 }
 
 static Event XEventToEvent(XEvent event) {
-        switch (event.type) {
-        case ClientMessage:
+	switch (event.type) {
+	case ClientMessage:
 		// Assume the window was closed.
 		return EVENT_QUIT;
-        case ButtonPress:
+	case ButtonPress:
 		if (event.xbutton.button == 1)
 			mouse_buttons[0] = true;
 		else if (event.xbutton.button == 3)
 			mouse_buttons[1] = true;
 		else
 			return EVENT_NULL;
-		
+
 		pointer.x = event.xbutton.x;
-                pointer.y = event.xbutton.y;
-		
+		pointer.y = event.xbutton.y;
+
 		return EVENT_MOUSE_BUTTON;
 	case ButtonRelease:
 		if (event.xbutton.button == 1)
@@ -121,25 +121,25 @@ static Event XEventToEvent(XEvent event) {
 			mouse_buttons[1] = false;
 		else
 			return EVENT_NULL;
-		
+
 		pointer.x = event.xbutton.x;
-                pointer.y = event.xbutton.y;
-		
+		pointer.y = event.xbutton.y;
+
 		return EVENT_MOUSE_BUTTON;
-        case MotionNotify:
+	case MotionNotify:
 		pointer.x = event.xmotion.x;
-                pointer.y = event.xmotion.y;
+		pointer.y = event.xmotion.y;
 		return EVENT_MOUSE_MOVE;
-        case KeyPress:
+	case KeyPress:
 		return EVENT_KEY_PRESS;
-        case SelectionRequest:
+	case SelectionRequest:
 		FillSelectionRequest(event);
 		return EVENT_NULL;
 	case Expose:
 		return EVENT_UPDATE_WINDOW;
-        }
+	}
 
-        return EVENT_NULL;
+	return EVENT_NULL;
 }
 
 Event PeekEvent() {
@@ -162,27 +162,35 @@ int main(int argc, char** argv) {
 	XShmSegmentInfo shmseg;
 
 	display = XOpenDisplay(NULL);
-        if (!display) {
+	if (!display) {
 		fprintf(stderr, "Cannot open displayplay.\n");
 		exit(1);
-        }
+	}
 
-        { // Create windows
-                main_window = XCreateSimpleWindow(
-			display, RootWindow(display, 0), 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 5,
-			BlackPixel(display, 0), WhitePixel(display, 0));
-                XStoreName(display, main_window, WINDOW_TITLE);
-                XResizeWindow(display, main_window, SCREEN_WIDTH, SCREEN_HEIGHT);
-        }
+	{ // Create windows
+		main_window = XCreateSimpleWindow(display, RootWindow(display, 0), 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 5, BlackPixel(display, 0), WhitePixel(display, 0));
+		XStoreName(display, main_window, WINDOW_TITLE);
+		XResizeWindow(display, main_window, SCREEN_WIDTH, SCREEN_HEIGHT);
+	}
 
-        { // Initialize event listening
-                Atom del_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
-                XSetWMProtocols(display, main_window, &del_window, 1);
-                XSelectInput(display, main_window, ExposureMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask | KeyPressMask | KeyReleaseMask);
-        }
+	{ // Set window size attributes
+		XSizeHints sizeHints;
+		
+		sizeHints.flags |= PMinSize | PMaxSize;
+		sizeHints.min_width = sizeHints.max_width = SCREEN_WIDTH;
+		sizeHints.min_height = sizeHints.max_height = SCREEN_HEIGHT;
 
-        { // Setup Shm for quick rendering
-                if (XShmQueryExtension(display)) {
+		XSetWMNormalHints(display, main_window, &sizeHints);
+	}
+	
+	{ // Initialize event listening
+		Atom del_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
+		XSetWMProtocols(display, main_window, &del_window, 1);
+		XSelectInput(display, main_window, ExposureMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask | KeyPressMask | KeyReleaseMask);
+	}
+
+	{ // Setup Shm for quick rendering
+		if (XShmQueryExtension(display)) {
 			image = XShmCreateImage(
 				display, DefaultVisual(display, DefaultScreen(display)),
 				DefaultDepth(display, DefaultScreen(display)), ZPixmap,
@@ -195,18 +203,18 @@ int main(int argc, char** argv) {
 			shmseg.readOnly = false;
 			XShmAttach(display, &shmseg);
 			screen = (uint32_t*) shmseg.shmaddr;
-                } else {
-                        // TODO: Use slow XPutImage.
+		} else {
+			// TODO: Use slow XPutImage.
 			fprintf(stderr, "XShm not available.\n");
 			exit(1);
-                }
-        }
-	
-        // Display window
+		}
+	}
+
+	// Display window
 	XMapWindow(display, main_window);
-	
+
 	// Run Pixel Grab
-        status = AppMain(argc, argv);
+	status = AppMain(argc, argv);
 
 	// Cleanup
 	XShmDetach(display, &shmseg);

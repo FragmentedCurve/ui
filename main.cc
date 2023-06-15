@@ -15,14 +15,10 @@ const int GRID_HEIGHT = PIXEL_ZOOM * SCAN_HEIGHT;
 const int SCREEN_HEIGHT = PIXEL_ZOOM * SCAN_HEIGHT + 50;
 const int SCREEN_WIDTH = PIXEL_ZOOM * SCAN_WIDTH;
 
-#define newline() Console("\n")
-
-auto p_panel = Point(5, SCREEN_HEIGHT - 40 - 5);
-
-static bool scan_mode = false;
+static auto p_panel = Point(5, SCREEN_HEIGHT - 40 - 5);
 
 UIWidget *wstack[] = {
-	new HexFloat(p_panel.From(100, 0).From(110, 0).From(210, 5)),
+	new HexFloat(Point(0, 0)),
 	new UIToggle(p_panel, 100, 40),
 	new UIButton(p_panel.From(110, 0), 100, 40),
 	new UIPixelScanner(Point(0, 0), SCREEN_WIDTH, GRID_HEIGHT, PIXEL_ZOOM),
@@ -37,88 +33,94 @@ static void callback_grid(UIWidget *w, Event e, void* data) {
 	auto grid = (UIPixelScanner*) w;
 	auto hf = (HexFloat*) wstack[0];
 	auto toggle = (UIToggle*) wstack[1];
-
-	scan_mode = grid->ScanMode();
-        if (!scan_mode) {
-		if (e == EVENT_MOUSE_BUTTON && !mouse_buttons[0]) {
+	auto prev_state = (bool*) data;
+	
+	if (!grid->ScanMode()) {
+		if (e == EVENT_MOUSE_BUTTON && (!mouse_buttons[0] || prev_state)) {
 			Console(hf->color_s);
-			newline();
+			Console("\n");
 			ToClipboard(hf->color_s);
 			ReleaseOwner(grid);
 		}
 		toggle->Off();
-        }
+	}
 	hf->Set(grid->Get());
-
-	UNUSED(data);
 }
 
 static void callback_scan(UIWidget *w, Event e, void* data) {
 	auto b = (UIToggle*) w;
 	auto grid = (UIPixelScanner*) wstack[3];
-	
-	scan_mode = grid->Toggle();
+
+	grid->Toggle();
 	b->Toggle();
 
 	UNUSED(data);
 }
 
-// Skip reporting motion events to avoid wasted drawing.
-static void SkipMotionQueue() {
-	while (PeekEvent() == EVENT_MOUSE_MOVE && PendingEvents() > 1)
-		GetEvent();
-}
-
+// Optimizations for scanning.
 static void fast_scan(Screen* scr, Event e) {
-	// Optimizations for scanning.
 	auto grid = (UIPixelScanner*) wstack[3];
 	auto hf = (HexFloat*) wstack[0];
-	
-	SkipMotionQueue();
-	grid->Handle(e);
-	grid->Draw(scr);
 
-	hf->Set(grid->Get());
-	hf->Draw(scr);
+	if ((e == EVENT_MOUSE_MOVE && PendingEvents() <= 1)) {
+		// Avoid drawing every movement
+		grid->Handle(e);
+		grid->Draw(scr);
+		hf->Set(grid->Get());
+		hf->Draw(scr);
+	} else if (e == EVENT_MOUSE_BUTTON && mouse_buttons[0]) {
+		// We're exiting scan mode
+		grid->Handle(e);
+		UIDraw(scr, wstack, NUMBER_OF(UIWidget *, wstack));
+	}
 }
 
 int AppMain(int argc, char **argv) {
 	Event e;
 
 	auto scr = new Screen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
-	
-        { // Draw cool squares in lower right corner.
-		auto p = Point(SCREEN_WIDTH - 5, SCREEN_HEIGHT - 5);
-		scr->DrawFill(0xdedbde, Point(0, 0), Point(SCREEN_WIDTH, SCREEN_HEIGHT));
-		scr->DrawFill(BLACK, p.From(-10, -10), p);
-		scr->DrawRect(BLACK, p.From(-11, 0).From(-10, -10), p.From(-11, 0));
-		scr->DrawRect(BLACK, p.From(0, -11).From(-10, -10), p.From(0, -11));
-        }
-	
-        wstack[1]->callback = callback_scan;
-        wstack[2]->callback = callback_exit;
+
+	{ // Draw cool squares in lower right corner.
+		auto r = Rect(SCREEN_WIDTH - 15, SCREEN_HEIGHT - 15, 10, 10);
+		scr->DrawFill(UI_SURFACE_BG, Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
+
+		scr->DrawFill(0xff0000, r);
+		scr->DrawFill(0x00ff00, r.From(-11, 0));
+		scr->DrawFill(0x0000ff, r.From(0, -11));
+
+		scr->DrawRect(UI_DARKEST, r);
+		scr->DrawRect(UI_DARKEST, r.From(-11, 0));
+		scr->DrawRect(UI_DARKEST, r.From(0, -11));
+	}
+
+	wstack[1]->callback = callback_scan;
+	wstack[2]->callback = callback_exit;
 	wstack[3]->callback = callback_grid;
-	
-        while ((e = GetEvent()) != EVENT_QUIT) {
+
+	// Draw inital screen so it's not blank on startup
+	UIDraw(scr, wstack, NUMBER_OF(UIWidget *, wstack));
+
+	auto grid = (UIPixelScanner*) wstack[3];
+	while ((e = GetEvent()) != EVENT_QUIT) {
 		if (e == EVENT_NULL || e == EVENT_LAST)
 			continue;
 
-                if (e == EVENT_UPDATE_WINDOW) {
+		if (e == EVENT_UPDATE_WINDOW) {
 			UpdateWindow();
 			continue;
-                }
+		}
 
-                if (scan_mode) {
+		if (grid->ScanMode()) {
 			fast_scan(scr, e);
-                } else {
-                        UIDelegate(e, wstack, NUMBER_OF(UIWidget *, wstack));
-                        UIDraw(scr, wstack, NUMBER_OF(UIWidget *, wstack));
-                }
-		
-                UpdateWindow();
-        }
+		} else {
+			UIDelegate(e, wstack, NUMBER_OF(UIWidget *, wstack));
+			UIDraw(scr, wstack, NUMBER_OF(UIWidget *, wstack));
+		}
+
+		UpdateWindow();
+	}
 
 	delete scr;
-	
+
 	return 0;
 }

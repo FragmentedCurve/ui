@@ -1,71 +1,74 @@
 #include "ui.h"
 
-Screen::Screen(int xw, int yw) {
-	this->xw = xw;
-	this->yw = yw;
-	pixels = new uint32_t[xw * yw];
-}
-
-Screen::Screen(uint32_t* pixels, int xw, int yw) {
-	this->xw = xw;
-	this->yw = yw;
-	this->pixels = pixels;
-}
-
-#include <cstring>
+Screen::Screen(int xw, int yw): Screen(new uint32_t[xw * yw], xw, yw) {}
+Screen::Screen(uint32_t* pixels, int xw, int yw) : xw(xw), yw(yw), pixels(pixels)  {}
 
 void Screen::DrawHLine(Pixel c, Point p, int width) {
-  	// Completely off the screen
-	if (p.x >= xw || p.y < 0 || p.y >= yw)
+	DrawHLine(c, p, width, Rect(0, 0, xw, yw));
+}
+
+void Screen::DrawHLine(Pixel c, Point p, int width, Rect clip) {
+	// Completely outside the clip area
+	if (p.x >= clip.p.x + clip.xw || p.y < clip.p.y || p.y >= clip.p.y + yw)
 		return;
 
-	// Clip top
-        if (p.x < 0) {
-		width += p.x;
-                p.x = 0;
-        }
+	// Clip left
+	if (p.x < clip.p.x) {
+		width -= clip.p.x - p.x;
+		p.x = clip.p.x;
+	}
 
-        // Clip bottom
-        if (p.x + width > xw)
-		width = xw - p.x;
+	// Clip right
+	if (p.x + width > clip.p.x + clip.xw)
+		width = clip.p.x + clip.xw - p.x;
 
 	while (--width >= 0)
 		pixels[INDEX(xw, p.x + width, p.y)] = c;
 }
 
 void Screen::DrawVLine(Pixel c, Point p, int height) {
-	// Completely off the screen
-	if (p.y >= yw || p.x < 0 || p.x >= xw)
+	DrawVLine(c, p, height, Rect(0, 0, xw, yw));
+}
+
+void Screen::DrawVLine(Pixel c, Point p, int height, Rect clip) {
+	// Completely outside the clip area
+	if (p.y >= clip.p.y + clip.yw || p.x < clip.p.x || p.x >= clip.p.x + clip.xw)
 		return;
 
 	// Clip top
-        if (p.y < 0) {
-		height += p.y;
-                p.y = 0;
-        }
+	if (p.y < clip.p.y) {
+		height -= clip.p.y - p.y;
+		p.y = clip.p.y;
+	}
 
-        // Clip bottom
-        if (p.y + height > yw)
-		height = yw - p.y;
-	
-        while (--height >= 0)
+	// Clip bottom
+	if (p.y + height > clip.p.y + clip.yw)
+		height = clip.p.y + clip.yw - p.y;
+
+	while (--height >= 0)
 		pixels[INDEX(xw, p.x, p.y + height)] = c;
 }
 
 void Screen::DrawFill(Pixel c, Point p0, Point p1) {
-	int xw = p1.x - p0.x;
-	int yw = p1.y - p0.y;
+	DrawFill(c, Rect(p0, p1));
+}
 
-	while (--yw >= 0)
-		DrawHLine(c, Point(p0.x, p0.y + yw), xw);
+void Screen::DrawFill(Pixel c, Rect r) {
+	for (int i = 0; i < r.yw; i++)
+		DrawHLine(c, r.p.From(0, i), r.xw);
 }
 
 void Screen::DrawRect(Pixel c, Point p0, Point p1) {
-	auto h_width = p1.x - p0.x;
-	auto v_height = p1.y - p0.y;
+	DrawRect(c, Rect(p0, p1));
+}
 
-	DrawHLine(c, p0, h_width); // Top
-	DrawHLine(c, Point(p0.x, p1.y - 1), h_width); // Bottom
-	DrawVLine(c, p0, v_height); // Left
-	DrawVLine(c, Point(p1.x - 1, p0.y), v_height);
+void Screen::DrawRect(Pixel c, Rect r) {
+	// Top
+	DrawHLine(c, r.p, r.xw);
+	// Bottom
+	DrawHLine(c, r.p.From(0, r.yw - 1), r.xw);
+	// Left
+	DrawVLine(c, r.p, r.yw);
+	// Right
+	DrawVLine(c, r.p.From(r.xw - 1, 0), r.yw);
 }
