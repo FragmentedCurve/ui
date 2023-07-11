@@ -1,9 +1,8 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#include "common.h"
-
-#define INDEX(xw, x, y) ((xw) * (y) + (x))
+#include "ui_common.h"
+#include "ui_util.h"
 
 struct Screen {
 	Screen(int xw, int yw);
@@ -13,95 +12,119 @@ struct Screen {
 	void DrawHLine(Pixel c, Point p, int width, Rect clip);
 	void DrawVLine(Pixel c, Point p, int height);
 	void DrawVLine(Pixel c, Point p, int height, Rect clip);
-	void DrawFill(Pixel c, Point p0, Point p1);
 	void DrawFill(Pixel c, Rect r);
-	void DrawRect(Pixel c, Point p0, Point p1);
 	void DrawRect(Pixel c, Rect r);
+	void DrawRect(Pixel c, Rect r, Rect clip);
 
 	int xw, yw;
 	uint32_t *pixels;
 };
 
 enum UIColors {
-	UI_DARKEST        = 0x000000,
-	UI_LIGHTEST       = 0xffffff,
-	UI_SURFACE_BG     = 0xdedbde, // TODO: Rename this, "BG" isn't properly descriptive.
-	UI_SURFACE_FG     = 0xe8e8e8, // TODO: Rename for the same reasons above.
-	UI_SURFACE_HILITE = 0xf0f0f0,
-	UI_SURFACE_SHADOW = 0xa0a0a0,
-	UI_SURFACE_BORDER = 0x000000,
-	UI_TEXT_BG        = 0xffffff,
-	UI_TEXT_FG        = 0x000000,
-	UI_TEXT_BORDER    = 0x2e2e2e,
-	UI_LIGHT_BORDER   = 0x2e2e2e,
-	UI_LIGHT_ON       = 0xffd166, // TODO: Potential alternative default (green): 0x00cd00
-	UI_LIGHT_OFF      = 0xdedbde,
+	UI_DARKEST        = RGB(   0,    0   , 0),
+	UI_LIGHTEST       = RGB(0xff, 0xff, 0xff),
+	UI_SURFACE_BG     = RGB(0xde, 0xdb, 0xde), // TODO: Rename this, "BG" isn't properly descriptive.
+	UI_SURFACE_FG     = RGB(0xe8, 0xe8, 0xe8), // TODO: Rename for the same reasons above.
+	UI_SURFACE_HILITE = RGB(0xf0, 0xf0, 0xf0),
+	UI_SURFACE_SHADOW = RGB(0xa0, 0xa0, 0xa0),
+	UI_SURFACE_BORDER = RGB(   0,    0,    0),
+	UI_TEXT_BG        = RGB(0xff, 0xff, 0xff),
+	UI_TEXT_FG        = RGB(   0,    0,    0),
+	UI_TEXT_BORDER    = RGB(0x2e, 0x2e, 0x2e),
+	UI_LIGHT_BORDER   = RGB(0x2e, 0x2e, 0x2e),
+	UI_LIGHT_ON       = RGB(0xff, 0xd1, 0x66), // TODO: Potential alternative default (green): 0x00cd00
+	UI_LIGHT_OFF      = RGB(0xde, 0xdb, 0xde),
 };
 
 // TODO: Change "EVENT_" prefix and reduce to only 2 results.
 //enum EventOutcome { EVENT_UNHANDLED, EVENT_PROCESSED, EVENT_ABSORBED };
 
+typedef void (*UICallback)(struct UIWidget*, Event, void*);
+typedef bool (*UIHandler)(struct UIWidget*, Event);
+
 struct UIWidget {
 	UIWidget() {}
-
-	UIWidget(Point pos, int xw, int yw) : pos(pos), xw(xw), yw(yw) {}
+	UIWidget(Rect r) : r(r) {}
+	UIWidget(Point pos, int xw, int yw) : r(pos, xw, yw) {}
 
 	bool Hit(Point p) {
 		return Hit(p.x, p.y);
 	}
 
 	bool Hit(int x, int y) {
-		return (x >= pos.x) && (x < pos.x + xw) && (y >= pos.y) && (y < pos.y + yw);
+		return r.Hit(x, y);
 	}
 
-	//bool CaptureMouse(Event e);
-
 	virtual void Draw(Screen *scr) {}
+	virtual void Draw(Screen *scr, Rect clip) {}
 
 	virtual bool Handle(Event e) {
-		//CaptureMouse(e);
 		return HANDLED_FAILURE;
 	}
 
-	Point pos = Point(0, 0);
-	int xw = 0, yw = 0;
+	virtual void Move(int x, int y) {
+		r = Rect(x, y, r.xw, r.yw);
+	}
 
-	Rect r = Rect(0, 0, 0, 0); // TODO: Replace pos, xw, and yw with r.
+	virtual void Move(Point p) {
+		Move(p.x, p.y);
+	}
 
-	// TODO: Implement using visible.
+	virtual void Push(int x, int y) {
+		r = r.From(x, y);
+	}
+	
+	virtual void Push(Point p) {
+		Push(p.x, p.y);
+	}
+	
+	virtual void Resize(int dx, int dy) {
+		r = r.Resize(dx, dy);
+	}
+	
+	Rect r = Rect(0, 0, 0, 0);
+
+	// Properties
 	bool visible = true;   // Widget is active and visable.
-	// TODO: Implement using cbHandle.
-	bool cbHandle = false; // Skip calling Handle() and call callback() instead.
+	
+	// Called when the widget executes it's behavior.
+	UICallback callback = NULL;
 
-	// User defined callback either called by this->Handle() or
-	// directly from UIDelegate().
-	void (*callback)(UIWidget*, Event, void*) = NULL;
+	// Call before the handler is called.
+	UIHandler prehook[EVENT_LAST] = {0};
 
-protected:
+	// Replace the default handler.
+	UIHandler hook[EVENT_LAST] = {0};
+
+	// Call after the handler is called.
+	UIHandler posthook[EVENT_LAST] = {0};
+	
+//protected:
 	bool paint = true;     // The widget should be drawn (again).
 };
 
-/*
-struct UIPanel : UIWidget {
-	UIPanel(Point position, int xw, int yw) : UIWidget(position, xw, yw)  {}
-        UIPanel(Point position, int xw, int yw, Pixel bg) : UIWidget(position, xw, yw), color(bg)  {}
+struct UISurface : UIWidget {
+	UISurface(Rect r) : UIWidget(r) {}
 
-        virtual bool Handle(Event e) {
-		if (e == EVENT_MOUSE_MOVE || e == EVENT_MOUSE_BUTTON)
-			return HANDLED_SUCCESS;
-		return HANDLED_FAILURE;
+	virtual void Draw(Screen* scr) {
+		if (paint)
+			scr->DrawFill(UI_SURFACE_BG, r);
+		paint = false;
 	}
-
-        virtual void Draw(Screen *scr) {
-                scr->DrawFill(color, pos, pos.From(xw, yw));
-        }
-	
-        Pixel color = UI_SURFACE_BG;
+  /*
+	virtual bool Handle(Event e) {
+		static auto entry = false;
+		static auto mstates = mouse_buttons;
+		
+		if (e != EVENT_MOUSE_BUTTON)
+			return HANDLED_FAILURE;
+	}
+  */
 };
-*/
 
 struct UILight : UIWidget {
 	UILight(Point position) : UIWidget(position, 16, 16) {}
+  	UILight(Rect r) : UIWidget(r) {}
 	virtual void Draw(Screen *scr);
 	void On() { on = true; }
 	void Off() { on = false; }
@@ -118,6 +141,8 @@ struct UIButton : UIWidget {
 	void Draw(Screen* scr);
 	virtual bool Handle(Event e);
 
+	bool Pressed() { return pressed; }
+	
 private:
 	void Draw(Screen* scr, Pixel hilite, Pixel shadow, Pixel bg);
 	char* label;
@@ -125,25 +150,25 @@ private:
 };
 
 struct UIToggle : UIButton {
-	UIToggle(Point position, int xw, int yw)
-		: UIButton(position, xw, yw), light(position.From(10, yw / 2 - 8)) {
-		callback = UIToggle::default_callback;
+	UIToggle(Point p, int xw, int yw)
+		: UIButton(p, xw, yw), light(Rect(p.From(8, 8), 16, yw - 16)) { }
+	
+	virtual void Move(int x, int y) {
+		UIWidget::Move(x, y);
+		light.Move(x, y);
 	}
 
+	virtual void Resize(int xw, int yw) {
+		UIWidget::Resize(xw, yw);
+		light.Resize(0, yw);
+	}
+	
 	void Toggle() { light.Toggle(); }
 	void On() { light.On(); }
 	void Off() { light.Off(); }
 
 	virtual void Draw(Screen *scr);
 	virtual bool Handle(Event e);
-
-	// TODO: Should this default callback exist? Maybe just let
-	// the user define the callback.
-	static void default_callback(UIWidget *w, Event e, void* data) {
-		auto toggle = (UIToggle *)w;
-		toggle->Toggle();
-		(void) data;
-	}
 
 private:
 	bool toggle = false;
@@ -157,7 +182,7 @@ struct UIPixelGrid : UIWidget {
 	Pixel Get(int x, int y) { return pixels[INDEX(cols, x, y)]; }
 	void Set(Pixel c, int x, int y) { pixels[INDEX(cols, x, y)] = c; }
 
-protected:
+//protected:
 	void DrawCell(Screen* scr, int x, int y);
 	Point CellPosition(int x, int y);
 
@@ -184,21 +209,6 @@ private:
 	bool pressed = false;
 };
 
-struct UIPixelScanner : UIPixelSelector {
-	UIPixelScanner(Point position, int xw, int yw, int zoom)
-		: UIPixelSelector(position, xw, yw, zoom) {}
-	bool Toggle();
-	void On(); // TODO: Implement.
-	void Off(); // TODO: Implement.
-	bool ScanMode() { return scan_mode; }
-	virtual bool Handle(Event e);
-	virtual void Draw(Screen* scr);
-
-private:
-	void Scan();
-	bool scan_mode = false;
-};
-
 struct HexFloat : UIWidget {
 	HexFloat() : UIWidget(Point(0, 0), 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
 	HexFloat(Point p) : UIWidget(p, 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST);
@@ -218,5 +228,4 @@ void UIDraw(Screen *scr, UIWidget *w[], int n);
 void SetOwner(UIWidget* w, ...);
 void ReleaseOwner(UIWidget* w);
 void ReleaseOwner(UIWidget* w, int e, ...);
-
 #endif // _UI_H_

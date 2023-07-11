@@ -49,26 +49,22 @@ void Screen::DrawVLine(Pixel c, Point p, int height, Rect clip) {
 		pixels[INDEX(xw, p.x, p.y + height)] = c;
 }
 
-void Screen::DrawFill(Pixel c, Point p0, Point p1) {
-	DrawFill(c, Rect(p0, p1));
-}
-
 void Screen::DrawFill(Pixel c, Rect r) {
 	for (int i = 0; i < r.yw; i++)
 		DrawHLine(c, r.p.From(0, i), r.xw);
 }
 
-void Screen::DrawRect(Pixel c, Point p0, Point p1) {
-	DrawRect(c, Rect(p0, p1));
+void Screen::DrawRect(Pixel c, Rect r) {
+	DrawRect(c, r, Rect(0, 0, xw, yw));
 }
 
-void Screen::DrawRect(Pixel c, Rect r) {
+void Screen::DrawRect(Pixel c, Rect r, Rect clip) {
 	// Top
-	DrawHLine(c, r.p, r.xw);
+	DrawHLine(c, r.p, r.xw, clip);
 	// Bottom
-	DrawHLine(c, r.p.From(0, r.yw - 1), r.xw);
+	DrawHLine(c, r.p.From(0, r.yw - 1), r.xw, clip);
 	// Left
-	DrawVLine(c, r.p, r.yw);
+	DrawVLine(c, r.p, r.yw, clip);
 	// Right
-	DrawVLine(c, r.p.From(r.xw - 1, 0), r.yw);
+	DrawVLine(c, r.p.From(r.xw - 1, 0), r.yw, clip);
 }

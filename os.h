@@ -1,7 +1,7 @@
 #ifndef _OS_H_
 #define _OS_H_
 
-#include "common.h"
+#include "ui_common.h"
 
 // Platform Dependent, implemented in os_*.cc
 

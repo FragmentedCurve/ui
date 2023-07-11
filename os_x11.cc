@@ -10,7 +10,7 @@
 #include <sys/shm.h>
 #include <X11/extensions/XShm.h>
 
-#include "common.h"
+#include "ui_common.h"
 
 static Display* display;
 static Window main_window;
