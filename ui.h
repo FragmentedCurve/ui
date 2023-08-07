@@ -56,7 +56,7 @@ struct UIWidget {
 	}
 
 	virtual void Draw(Screen *scr) {}
-	virtual void Draw(Screen *scr, Rect clip) {}
+	//virtual void Draw(Screen *scr, Rect clip = Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)) {}
 
 	virtual bool Handle(Event e) {
 		return HANDLED_FAILURE;
@@ -98,18 +98,23 @@ struct UIWidget {
 
 	// Call after the handler is called.
 	UIHandler posthook[EVENT_LAST] = {0};
-	
-//protected:
-	bool paint = true;     // The widget should be drawn (again).
+};
+
+
+struct UIRoot {
+	UIRoot() {
+		
+	}
+
+	UIWidget** children = NULL;
+	char* names = NULL;
 };
 
 struct UISurface : UIWidget {
 	UISurface(Rect r) : UIWidget(r) {}
 
 	virtual void Draw(Screen* scr) {
-		if (paint)
-			scr->DrawFill(UI_SURFACE_BG, r);
-		paint = false;
+		scr->DrawFill(UI_SURFACE_BG, r);
 	}
   /*
 	virtual bool Handle(Event e) {
@@ -222,8 +227,9 @@ private:
 	void DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0, Pixel c);
 };
 
-void UIDelegate(Event e, UIWidget* w[], int n);
+UIWidget* UIDelegate(Event e, UIWidget* w[], int n);
 void UIDraw(Screen *scr, UIWidget *w[], int n);
+//void UIDraw(Screen *scr, UIWidget *w[], int n, Rect clip);
 
 void SetOwner(UIWidget* w, ...);
 void ReleaseOwner(UIWidget* w);

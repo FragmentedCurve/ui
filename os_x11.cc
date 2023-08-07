@@ -17,6 +17,8 @@ static Window main_window;
 static XImage* image;
 static const char* clipboard_text;
 
+static auto mouse_grabbed = false;
+
 void Console(const char *s) {
 	printf("%s", s);
 	fflush(stdout);
@@ -39,20 +41,52 @@ void ReleaseMouse() {
 	XUngrabPointer(display, CurrentTime);
 }
 
-Pixel GetPixel(int x, int y) {
-	XWindowAttributes attr;
-	XGetWindowAttributes(display, DefaultRootWindow(display), &attr);
+static Pixel ___GetPixel(int x, int y) {
+	if (mouse_grabbed) {
+		
+	}
+}
 
+static Pixel __GetPixel(int x, int y) {
+	return (x << 8) + y;
+}
+
+static Pixel _GetPixel(int x, int y) {
+	XWindowAttributes attr;
+	Pixel c;
+
+	XImage i = {
+		.width      = 1,
+		.height     = 1,
+		.format     = ZPixmap,
+		.data       = (char*) &c,
+		.bitmap_pad = 32,
+		.depth      = 24,        
+		.bytes_per_line = sizeof(Pixel),
+		.bits_per_pixel = 32,
+	};
+	
+	XInitImage(&i);
+	XGetWindowAttributes(display, DefaultRootWindow(display), &attr);
+	
 	// Return black if out of bounds
 	if (x < 0 || y < 0 || x >= attr.width || y >= attr.height)
 		return Pixel(0);
+		
+	(void) XGetSubImage(
+			    display,
+			    DefaultRootWindow(display),
+			    x, y,
+			    1, 1,
+			    AllPlanes, ZPixmap,
+			    &i,
+			    0, 0);
 
-	XImage *i = XGetImage(display, DefaultRootWindow(display), x, y, 1, 1,
-			AllPlanes, ZPixmap);
-	Pixel pixel = XGetPixel(i, 0, 0);
-	XDestroyImage(i);
+	return c;
+}
 
-	return pixel;
+Pixel GetPixel(int x, int y) {
+	return GetPixel(x, y);
 }
 
 void UpdateWindow() {
@@ -173,8 +207,14 @@ int main(int argc, char** argv) {
 		XResizeWindow(display, main_window, SCREEN_WIDTH, SCREEN_HEIGHT);
 	}
 
+	/*
+	  FIXME: kwin_x11 (KDE's window manager) crashes if we try to
+	         set the window size.
+	*/
+
+	/*
 	{ // Set window size attributes
-		XSizeHints sizeHints;
+	XSizeHints sizeHints;
 		
 		sizeHints.flags |= PMinSize | PMaxSize;
 		sizeHints.min_width = sizeHints.max_width = SCREEN_WIDTH;
@@ -182,6 +222,7 @@ int main(int argc, char** argv) {
 
 		XSetWMNormalHints(display, main_window, &sizeHints);
 	}
+	*/	
 	
 	{ // Initialize event listening
 		Atom del_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);

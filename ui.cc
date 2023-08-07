@@ -101,7 +101,7 @@ static bool HandleWidget(Event e, UIWidget* w) {
 	return result;
 }
 
-void UIDelegate(Event e, UIWidget* w[], int n) {
+UIWidget* UIDelegate(Event e, UIWidget* w[], int n) {
 	// Catch programming mistakes.
 	assert(e != EVENT_NULL);
 	assert(e != EVENT_LAST);
@@ -110,7 +110,7 @@ void UIDelegate(Event e, UIWidget* w[], int n) {
 	// delegate directly to the owner.
 	if (event_owner[e]) {
 		HandleWidget(e, event_owner[e]);
-		return;
+		return event_owner[e];
 	}
 
 	for (int i = 0; i < n; i++) {
@@ -121,8 +121,10 @@ void UIDelegate(Event e, UIWidget* w[], int n) {
 			continue;
 
 		if (HandleWidget(e, w[i]) == HANDLED_SUCCESS)
-			return;
+			return w[i];
 	}
+
+	return NULL;
 }
 
 /*
@@ -202,8 +204,6 @@ void HexFloat::Set(Pixel c) {
 		c /= 0x10;
 		buf--;
 	}
-
-	paint = true;
 }
 
 // TODO: Clean this up. It was quickly hacked out just to make it work.
@@ -219,9 +219,6 @@ void HexFloat::DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0, Pixel
 }
 
 void HexFloat::Draw(Screen* scr) {
-	if (!paint)
-		return;
-
 	// TODO: Clean this up. It was quickly hacked out just to make it work.
 	scr->DrawFill(UI_TEXT_BG, r);
 	scr->DrawRect(UI_TEXT_BORDER, r);
@@ -241,8 +238,6 @@ void HexFloat::Draw(Screen* scr) {
 
 		DrawFont(scr, gylphs[c], sizeof(gylphs[c]), r.p.x + (5 + 8 * i), r.p.y + 8, color);
 	}
-
-	paint = false;
 }
 
 void UIButton::Draw(Screen* scr) {
@@ -322,14 +317,9 @@ Point UIPixelGrid::CellPosition(int x, int y) {
 }
 
 void UIPixelGrid::Draw(Screen* scr) {
-	if (!paint)
-		return;
-
 	for (int i = 0; i < cols; i++)
 		for (int j = 0; j < rows; j++)
 			DrawCell(scr, i, j);
-
-	paint = false;
 }
 
 void UIPixelGrid::DrawCell(Screen* scr, int x, int y) {
@@ -435,14 +425,9 @@ bool UIPixelSelector::Handle(Event e) {
 }
 
 void UIPixelSelector::Draw(Screen* scr) {
-	if (!paint) {
-		// Only paint selection
-		EraseSelection(scr);
-		DrawSelection(scr);
-		return;
-	}
+	EraseSelection(scr);
+	DrawSelection(scr);
 
 	UIPixelGrid::Draw(scr);
 	DrawSelection(scr);
-	paint = false;
 }

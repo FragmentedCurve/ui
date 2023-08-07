@@ -102,8 +102,8 @@ enum Event {
 extern Point pointer;
 extern bool mouse_buttons[2];
 extern Pixel* screen;
-extern const int SCREEN_WIDTH;
-extern const int SCREEN_HEIGHT;
+extern int SCREEN_WIDTH;
+extern int SCREEN_HEIGHT;
 extern const char* WINDOW_TITLE;
 int AppMain(int argc, char **argv);
 #endif // _UI_COMMON_H_

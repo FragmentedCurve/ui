@@ -23,6 +23,16 @@
 	bool func (UIWidget* w, Event e) { return handler_ ## func ((widget *) w, e); } \
 	static bool handler_ ## func (widget *w, Event e)
 
+
+#define UI_DEFINE_GLOBALS(title, win_width, win_height)	 \
+	Point pointer;					 \
+	bool mouse_buttons[2];				 \
+	Pixel* screen;					 \
+	int SCREEN_WIDTH   = (win_width);		 \
+	int SCREEN_HEIGHT  = (win_height);		 \
+	const char* WINDOW_TITLE = (title);
+
+
 #ifdef _DEBUG
 #include <cstdio>
 #define DEBUG(...) fprintf(stderr, __VA_ARGS__)

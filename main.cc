@@ -1,21 +1,18 @@
 #include "os.h"
 #include "ui.h"
 
+#include <cstdio>
 #include <cstdlib> // TODO: This is for exit(). Remove later.
 
-bool mouse_buttons[] = {false, false};
-Point pointer; // Updated from EVENT_MOUSE_MOVE or EVENT_MOUSE_BUTTON.
-Pixel* screen; // Set by the platform.
-
-const char* WINDOW_TITLE = "PixelGrab";
-
 #define PHI 1.618 // Golden ratio, because why not?
-int PIXEL_ZOOM = 16; 
-const int SCAN_HEIGHT = 25;
+int PIXEL_ZOOM = 16 / 3;
+const int SCAN_HEIGHT = 25 * 3;
 const int SCAN_WIDTH = SCAN_HEIGHT * PHI;
 const int GRID_HEIGHT = PIXEL_ZOOM * SCAN_HEIGHT;
-const int SCREEN_HEIGHT = PIXEL_ZOOM * SCAN_HEIGHT + 50;
-const int SCREEN_WIDTH = PIXEL_ZOOM * SCAN_WIDTH;
+
+UI_DEFINE_GLOBALS("PixelGrab",                    // Window Title
+		  PIXEL_ZOOM * SCAN_WIDTH,        // Window width
+		  PIXEL_ZOOM * SCAN_HEIGHT + 50); // Window  height
 
 static auto p_panel = Point(5, SCREEN_HEIGHT - 40 - 5);
 
@@ -33,18 +30,26 @@ CALLBACK(UIButton, cbExit) {
 	exit(0);
 }
 
+#include <ctime>
+
 static void Scan() {
 	auto p = pointer.From(-grid->cols / 2, -grid->rows / 2);
 
+	time_t start, end, avg;
+	
 	for (int i = 0; i < grid->cols; i++) {
 		for (int j = 0; j < grid->rows; j++) {
 			int x = p.x + i;
 			int y = p.y + j;
 
+			start = clock();
 			grid->pixels[INDEX(grid->cols, i, j)] = GetPixel(x, y);
+			end = clock();
+			avg += (end - start) / (grid->cols * grid->rows);
 		}
 	}
-	grid->paint = true;
+
+	//printf("AVG TIME PER PIXEL: %ld\n", avg);
 }
 
 static void ScanOn() {
