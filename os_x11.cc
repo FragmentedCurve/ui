@@ -41,17 +41,9 @@ void ReleaseMouse() {
 	XUngrabPointer(display, CurrentTime);
 }
 
-static Pixel ___GetPixel(int x, int y) {
-	if (mouse_grabbed) {
-		
-	}
-}
-
-static Pixel __GetPixel(int x, int y) {
-	return (x << 8) + y;
-}
-
-static Pixel _GetPixel(int x, int y) {
+Pixel GetPixel(int x, int y) {
+	// TODO: This is too slow. If we zoom rectangle is larger,
+	// this function causes a lot of lag.
 	XWindowAttributes attr;
 	Pixel c;
 
@@ -83,10 +75,6 @@ static Pixel _GetPixel(int x, int y) {
 			    0, 0);
 
 	return c;
-}
-
-Pixel GetPixel(int x, int y) {
-	return GetPixel(x, y);
 }
 
 void UpdateWindow() {
