@@ -207,7 +207,7 @@ void HexFloat::Set(Pixel c) {
 }
 
 // TODO: Clean this up. It was quickly hacked out just to make it work.
-void HexFloat::DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0, Pixel c) {
+void HexFloat::DrawFont(Screen* scr, bool* gylph, int len, int x0, int y0, Pixel c) {
 	auto zoom = 2;
 	for (int i = 0; i < len; i++) {
 		auto x = x0 + zoom * (i % 3);
