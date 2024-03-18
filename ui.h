@@ -18,6 +18,7 @@ struct Screen {
 
 	int xw, yw;
 	uint32_t *pixels;
+	// TODO: Implement pitch variable.
 };
 
 enum UIColors {
@@ -47,11 +48,11 @@ struct UIWidget {
 	UIWidget(Rect r) : r(r) {}
 	UIWidget(Point pos, int xw, int yw) : r(pos, xw, yw) {}
 
-	bool Hit(Point p) {
+	virtual bool Hit(Point p) {
 		return Hit(p.x, p.y);
 	}
 
-	bool Hit(int x, int y) {
+	virtual bool Hit(int x, int y) {
 		return r.Hit(x, y);
 	}
 
@@ -62,23 +63,23 @@ struct UIWidget {
 		return HANDLED_FAILURE;
 	}
 
-	virtual void Move(int x, int y) {
+	void Move(int x, int y) {
 		r = Rect(x, y, r.xw, r.yw);
 	}
 
-	virtual void Move(Point p) {
+	void Move(Point p) {
 		Move(p.x, p.y);
 	}
 
-	virtual void Push(int x, int y) {
+	void Push(int x, int y) {
 		r = r.From(x, y);
 	}
 	
-	virtual void Push(Point p) {
+	void Push(Point p) {
 		Push(p.x, p.y);
 	}
 	
-	virtual void Resize(int dx, int dy) {
+	void Resize(int dx, int dy) {
 		r = r.Resize(dx, dy);
 	}
 	
@@ -99,7 +100,6 @@ struct UIWidget {
 	// Call after the handler is called.
 	UIHandler posthook[EVENT_LAST] = {0};
 };
-
 
 struct UIRoot {
 	UIRoot() {
