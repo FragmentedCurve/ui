@@ -5,8 +5,8 @@
 #include <cstdlib> // TODO: This is for exit(). Remove later.
 
 #define PHI 1.618 // Golden ratio, because why not?
-int PIXEL_ZOOM = 16 / 3;
-const int SCAN_HEIGHT = 25 * 3;
+int PIXEL_ZOOM = 16;
+const int SCAN_HEIGHT = 25;
 const int SCAN_WIDTH = SCAN_HEIGHT * PHI;
 const int GRID_HEIGHT = PIXEL_ZOOM * SCAN_HEIGHT;
 
