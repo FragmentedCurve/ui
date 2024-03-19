@@ -6,7 +6,7 @@
 #include <windowsx.h>
 #include <gdiplus.h>
 
-#include "common.h"
+#include "ui_common.h"
 
 #include <cstdio> // TODO: For debugging, remove later.
 
