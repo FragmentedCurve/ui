@@ -7,6 +7,7 @@
 struct Screen {
 	Screen(int xw, int yw);
 	Screen(uint32_t *pixels, int xw, int yw);
+	Screen(uint32_t *pixels, int xw, int yw, int pitch);
 
 	void DrawHLine(Pixel c, Point p, int width);
 	void DrawHLine(Pixel c, Point p, int width, Rect clip);
@@ -16,9 +17,8 @@ struct Screen {
 	void DrawRect(Pixel c, Rect r);
 	void DrawRect(Pixel c, Rect r, Rect clip);
 
-	int xw, yw;
+	int xw, yw, pitch;
 	uint32_t *pixels;
-	// TODO: Implement pitch variable.
 };
 
 enum UIColors {
@@ -44,9 +44,16 @@ typedef void (*UICallback)(struct UIWidget*, Event, void*);
 typedef bool (*UIHandler)(struct UIWidget*, Event);
 
 struct UIWidget {
-	UIWidget() {}
-	UIWidget(Rect r) : r(r) {}
-	UIWidget(Point pos, int xw, int yw) : r(pos, xw, yw) {}
+	UIWidget(UIWidget* parent) {
+		Parent(parent);
+	}
+	UIWidget(UIWidget* parent, Rect r) : r(r) {
+		Parent(parent);
+	}
+	UIWidget(UIWidget* parent, Point pos, int xw, int yw) : r(pos, xw, yw) {
+		Parent(parent);
+	}
+
 
 	virtual bool Hit(Point p) {
 		return Hit(p.x, p.y);
@@ -82,12 +89,26 @@ struct UIWidget {
 	void Resize(int dx, int dy) {
 		r = r.Resize(dx, dy);
 	}
+
+	void Parent(UIWidget* p);
 	
 	Rect r = Rect(0, 0, 0, 0);
 
+
+	// Children (subtree)
+	UIWidget* childhead = NULL;
+	UIWidget* childtail = NULL;
+
+	// Siblings
+	UIWidget* next = NULL;
+	UIWidget* prev = NULL;
+
+	// Our Parent
+	UIWidget* parent = NULL;
+
 	// Properties
 	bool visible = true;   // Widget is active and visable.
-	
+
 	// Called when the widget executes it's behavior.
 	UICallback callback = NULL;
 
@@ -101,35 +122,18 @@ struct UIWidget {
 	UIHandler posthook[EVENT_LAST] = {0};
 };
 
-struct UIRoot {
-	UIRoot() {
-		
-	}
-
-	UIWidget** children = NULL;
-	char* names = NULL;
-};
-
 struct UISurface : UIWidget {
-	UISurface(Rect r) : UIWidget(r) {}
+	UISurface(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
 
 	virtual void Draw(Screen* scr) {
-		scr->DrawFill(UI_SURFACE_BG, r);
+		//scr->DrawFill(UI_SURFACE_BG, r);
+		scr->DrawFill(RED, r);
 	}
-  /*
-	virtual bool Handle(Event e) {
-		static auto entry = false;
-		static auto mstates = mouse_buttons;
-		
-		if (e != EVENT_MOUSE_BUTTON)
-			return HANDLED_FAILURE;
-	}
-  */
 };
 
 struct UILight : UIWidget {
-	UILight(Point position) : UIWidget(position, 16, 16) {}
-  	UILight(Rect r) : UIWidget(r) {}
+	UILight(UIWidget* parent, Point position) : UIWidget(parent, position, 16, 16) {}
+  	UILight(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
 	virtual void Draw(Screen *scr);
 	void On() { on = true; }
 	void Off() { on = false; }
@@ -141,7 +145,7 @@ private:
 };
 
 struct UIButton : UIWidget {
-	UIButton(Point position, int xw, int yw) : UIWidget(position, xw, yw) {}
+	UIButton(UIWidget* parent, Point position, int xw, int yw) : UIWidget(parent, position, xw, yw) {}
 
 	void Draw(Screen* scr);
 	virtual bool Handle(Event e);
@@ -155,8 +159,8 @@ private:
 };
 
 struct UIToggle : UIButton {
-	UIToggle(Point p, int xw, int yw)
-		: UIButton(p, xw, yw), light(Rect(p.From(8, 8), 16, yw - 16)) { }
+	UIToggle(UIWidget* parent, Point p, int xw, int yw)
+		: UIButton(parent, p, xw, yw), light(this, Rect(p.From(8, 8), 16, yw - 16)) { }
 	
 	virtual void Move(int x, int y) {
 		UIWidget::Move(x, y);
@@ -181,7 +185,7 @@ private:
 };
 
 struct UIPixelGrid : UIWidget {
-	UIPixelGrid(Point position, int xw, int yw , int zoom);
+	UIPixelGrid(UIWidget* parent, Point position, int xw, int yw , int zoom);
 	virtual ~UIPixelGrid();
 	void Draw(Screen* scr);
 	Pixel Get(int x, int y) { return pixels[INDEX(cols, x, y)]; }
@@ -196,8 +200,8 @@ struct UIPixelGrid : UIWidget {
 };
 
 struct UIPixelSelector : UIPixelGrid {
-	UIPixelSelector(Point position, int xw, int yw, int zoom)
-		: UIPixelGrid(position, xw, yw, zoom) {
+	UIPixelSelector(UIWidget* parent, Point position, int xw, int yw, int zoom)
+		: UIPixelGrid(parent, position, xw, yw, zoom) {
 		select = prev_select = Point(cols / 2, rows / 2);
 	}
 	void Select(int x, int y);
@@ -215,8 +219,8 @@ private:
 };
 
 struct HexFloat : UIWidget {
-	HexFloat() : UIWidget(Point(0, 0), 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
-	HexFloat(Point p) : UIWidget(p, 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST);
+	HexFloat(UIWidget* parent) : UIWidget(parent, Point(0, 0), 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
+	HexFloat(UIWidget* parent, Point p) : UIWidget(parent, p, 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST);
 	}
 	void Draw(Screen* scr);
 	void Set(Pixel c);
@@ -228,7 +232,7 @@ private:
 };
 
 UIWidget* UIDelegate(Event e, UIWidget* w[], int n);
-void UIDraw(Screen *scr, UIWidget *w[], int n);
+void UIDraw(Screen* scr, UIWidget* root);
 //void UIDraw(Screen *scr, UIWidget *w[], int n, Rect clip);
 
 void SetOwner(UIWidget* w, ...);

@@ -101,6 +101,7 @@ static bool HandleWidget(Event e, UIWidget* w) {
 	return result;
 }
 
+/*
 UIWidget* UIDelegate(Event e, UIWidget* w[], int n) {
 	// Catch programming mistakes.
 	assert(e != EVENT_NULL);
@@ -126,29 +127,64 @@ UIWidget* UIDelegate(Event e, UIWidget* w[], int n) {
 
 	return NULL;
 }
-
-/*
-struct Machine {
-	int mouse[2];
-	int keys[127];
-	Point pointer;
-};
-
-void newUIDelegate(UIWidget* w[], int n) {
-	static struct Machine* prevstate = NULL;
-
-	if (!prevstate) {
-		prevstate = new Machine;
-	}
-	
-	for (int i = 0; i < n; i++) {
-	}
-}
 */
 
-void UIDraw(Screen* scr, UIWidget *w[], int n) {
-	while (--n >= 0)
-		if (w[n]->visible) w[n]->Draw(scr);
+UIWidget* UIDelegate(Event e, UIWidget* root) {
+  /*
+	// Catch programming mistakes.
+	assert(e != EVENT_NULL);
+	assert(e != EVENT_LAST);
+	
+	// If the event has an owner, ignore normal processing and
+	// delegate directly to the owner.
+	if (event_owner[e]) {
+		HandleWidget(e, event_owner[e]);
+		return event_owner[e];
+	}
+
+	for (int i = 0; i < n; i++) {
+		if (!w[i]->visible)
+			continue;
+
+		if ((e == EVENT_MOUSE_BUTTON || e == EVENT_MOUSE_MOVE) && !w[i]->Hit(pointer))
+			continue;
+
+		if (HandleWidget(e, w[i]) == HANDLED_SUCCESS)
+			return w[i];
+	}
+  */
+	return NULL;
+}
+
+void UIDraw(Screen* scr, UIWidget* root) {
+	if (!root) return;
+
+	for (UIWidget* walk = root; walk; walk = walk->prev) {
+		if (walk->visible)
+			walk->Draw(scr);
+	}
+	UIDraw(scr, root->childtail);
+}
+
+void UIWidget::Parent(UIWidget* parent) {
+	if (!parent) {
+		return;
+	}
+
+	if (parent->childhead) {
+		next = parent->childhead;
+		next->prev = this;
+		parent->childhead = this;
+		this->parent = parent;
+	} else {
+		next = NULL;
+		prev = NULL;
+		parent->childhead = this;
+		parent->childtail = this;
+		this->parent = parent;
+	}
+
+	Move(r.From(parent->r.p).p);
 }
 
 void UILight::Draw(Screen* scr) {
@@ -298,7 +334,7 @@ bool UIButton::Handle(Event e) {
 	return HANDLED_FAILURE;
 }
 
-UIPixelGrid::UIPixelGrid(Point position, int xw, int yw, int zoom) : UIWidget(position, xw, yw) {
+UIPixelGrid::UIPixelGrid(UIWidget* parent, Point position, int xw, int yw, int zoom) : UIWidget(parent, position, xw, yw) {
 	cols = xw / zoom;
 	rows = yw / zoom;
 	this->zoom = zoom;

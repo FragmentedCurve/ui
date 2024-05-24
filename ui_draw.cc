@@ -1,7 +1,8 @@
 #include "ui.h"
 
-Screen::Screen(int xw, int yw): Screen(new uint32_t[xw * yw], xw, yw) {}
-Screen::Screen(uint32_t* pixels, int xw, int yw) : xw(xw), yw(yw), pixels(pixels)  {}
+Screen::Screen(int xw, int yw): Screen(new uint32_t[xw * yw], xw, yw, xw) {}
+Screen::Screen(uint32_t* pixels, int xw, int yw) : xw(xw), yw(yw), pitch(xw), pixels(pixels)  {}
+Screen::Screen(uint32_t* pixels, int xw, int yw, int pitch) : xw(xw), yw(yw), pitch(pitch), pixels(pixels)  {}
 
 void Screen::DrawHLine(Pixel c, Point p, int width) {
 	DrawHLine(c, p, width, Rect(0, 0, xw, yw));
@@ -23,7 +24,7 @@ void Screen::DrawHLine(Pixel c, Point p, int width, Rect clip) {
 		width = clip.p.x + clip.xw - p.x;
 
 	while (--width >= 0)
-		pixels[INDEX(xw, p.x + width, p.y)] = c;
+		pixels[INDEX(pitch, p.x + width, p.y)] = c;
 }
 
 void Screen::DrawVLine(Pixel c, Point p, int height) {
@@ -46,7 +47,7 @@ void Screen::DrawVLine(Pixel c, Point p, int height, Rect clip) {
 		height = clip.p.y + clip.yw - p.y;
 
 	while (--height >= 0)
-		pixels[INDEX(xw, p.x, p.y + height)] = c;
+		pixels[INDEX(pitch, p.x, p.y + height)] = c;
 }
 
 void Screen::DrawFill(Pixel c, Rect r) {
