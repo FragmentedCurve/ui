@@ -100,7 +100,7 @@ static void FillSelectionRequest(XEvent event) {
 		.requestor = event.xselectionrequest.requestor,
 		.selection = event.xselectionrequest.selection,
 		.target = event.xselectionrequest.target,
-		.property = event.xselectionrequest.property ? event.xselectionrequest.property	: XA_PRIMARY,
+		.property = event.xselectionrequest.property ? event.xselectionrequest.property : XA_PRIMARY,
 		.time = event.xselectionrequest.time
 	};
 

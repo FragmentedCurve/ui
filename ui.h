@@ -22,7 +22,7 @@ struct Screen {
 };
 
 enum UIColors {
-	UI_DARKEST        = RGB(   0,    0   , 0),
+	UI_DARKEST        = RGB(   0,    0,    0),
 	UI_LIGHTEST       = RGB(0xff, 0xff, 0xff),
 	UI_SURFACE_BG     = RGB(0xde, 0xdb, 0xde), // TODO: Rename this, "BG" isn't properly descriptive.
 	UI_SURFACE_FG     = RGB(0xe8, 0xe8, 0xe8), // TODO: Rename for the same reasons above.
@@ -54,7 +54,6 @@ struct UIWidget {
 		Parent(parent);
 	}
 
-
 	virtual bool Hit(Point p) {
 		return Hit(p.x, p.y);
 	}
@@ -64,7 +63,6 @@ struct UIWidget {
 	}
 
 	virtual void Draw(Screen *scr) {}
-	//virtual void Draw(Screen *scr, Rect clip = Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)) {}
 
 	virtual bool Handle(Event e) {
 		return HANDLED_FAILURE;
@@ -126,14 +124,21 @@ struct UISurface : UIWidget {
 	UISurface(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
 
 	virtual void Draw(Screen* scr) {
-		//scr->DrawFill(UI_SURFACE_BG, r);
-		scr->DrawFill(RED, r);
+		scr->DrawFill(UI_SURFACE_SHADOW, r);
+	}
+};
+
+struct UIPanel : UIWidget {
+	UIPanel(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
+
+	virtual void Draw(Screen* scr) {
+		scr->DrawFill(UI_SURFACE_BG, r);
 	}
 };
 
 struct UILight : UIWidget {
 	UILight(UIWidget* parent, Point position) : UIWidget(parent, position, 16, 16) {}
-  	UILight(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
+	UILight(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
 	virtual void Draw(Screen *scr);
 	void On() { on = true; }
 	void Off() { on = false; }
@@ -160,7 +165,7 @@ private:
 
 struct UIToggle : UIButton {
 	UIToggle(UIWidget* parent, Point p, int xw, int yw)
-		: UIButton(parent, p, xw, yw), light(this, Rect(p.From(8, 8), 16, yw - 16)) { }
+	  : UIButton(parent, p, xw, yw), light(this, Rect(8, 8, 16, yw - 16)) { }
 	
 	virtual void Move(int x, int y) {
 		UIWidget::Move(x, y);
@@ -220,8 +225,7 @@ private:
 
 struct HexFloat : UIWidget {
 	HexFloat(UIWidget* parent) : UIWidget(parent, Point(0, 0), 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
-	HexFloat(UIWidget* parent, Point p) : UIWidget(parent, p, 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST);
-	}
+	HexFloat(UIWidget* parent, Point p) : UIWidget(parent, p, 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
 	void Draw(Screen* scr);
 	void Set(Pixel c);
 
@@ -231,9 +235,9 @@ private:
 	void DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0, Pixel c);
 };
 
-UIWidget* UIDelegate(Event e, UIWidget* w[], int n);
+//UIWidget* UIDelegate(Event e, UIWidget* root); // TODO: Remove
+UIWidget* UIDelegate(UIState state, UIWidget* root);
 void UIDraw(Screen* scr, UIWidget* root);
-//void UIDraw(Screen *scr, UIWidget *w[], int n, Rect clip);
 
 void SetOwner(UIWidget* w, ...);
 void ReleaseOwner(UIWidget* w);

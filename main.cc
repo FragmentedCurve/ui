@@ -113,32 +113,44 @@ static void fast_scan(Screen* scr, Event e) {
 }
 */
 
+struct Logo : UIWidget {
+	Logo(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
+	
+	void Draw(Screen* scr) {
+		auto pad = 1;
+		auto width = 10; //r.xw / 2 - pad;
+		auto box = Rect(0, 0, width, width);
+		
+		scr->DrawFill(RED, box.From(width + pad, width + pad).From(r.p));
+		scr->DrawFill(GREEN, box.From(0, width + pad).From(r.p));
+		scr->DrawFill(BLUE, box.From(width + pad, 0).From(r.p));
+		
+		scr->DrawRect(UI_DARKEST, box.From(width + pad, width + pad).From(r.p));
+		scr->DrawRect(UI_DARKEST, box.From(0, width + pad).From(r.p));
+		scr->DrawRect(UI_DARKEST, box.From(width + pad, 0).From(r.p));
+	}
+};
+
 int AppMain(int argc, char **argv) {
 	Event e;
 	UIWidget* root;
 
 	auto scr = new Screen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-	{ // Draw cool squares in lower right corner.
-		auto r = Rect(SCREEN_WIDTH - 15, SCREEN_HEIGHT - 15, 10, 10);
-		scr->DrawFill(UI_SURFACE_BG, Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
-
-		scr->DrawFill(RED, r);
-		scr->DrawFill(GREEN, r.From(-11, 0));
-		scr->DrawFill(BLUE, r.From(0, -11));
-
-		scr->DrawRect(UI_DARKEST, r);
-		scr->DrawRect(UI_DARKEST, r.From(-11, 0));
-		scr->DrawRect(UI_DARKEST, r.From(0, -11));
-	}
-
+	
 	{ // GUI Tree
-		auto p_panel = Point(5, SCREEN_HEIGHT - 40 - 5); // TODO: This is stupid. Remove after children are relative to parents.
 		root = new UIWidget(NULL, Point(0, 0), SCREEN_WIDTH, SCREEN_HEIGHT);
-		new UIPixelSelector(root, Point(0, 0), SCREEN_WIDTH, GRID_HEIGHT, PIXEL_ZOOM);
-		new UIToggle(root, p_panel, 100, 40);
-		new UIButton(root, p_panel.From(110, 0), 100, 40);
+		
 		auto colorlabel = new HexFloat(root, Point(0, 0));
+		auto grid = new UIPixelSelector(root, Point(0, 0), root->r.xw, GRID_HEIGHT, PIXEL_ZOOM);
+
+		auto panel = new UIPanel(root, Rect(0, grid->r.yw, SCREEN_WIDTH, SCREEN_HEIGHT - grid->r.yw));
+		new UIToggle(panel, Point(5, 5), 100, 40);
+		new UIButton(panel, Point(110, 5), 100, 40);
+
+		new Logo(panel, Rect(panel->r.xw - (panel->r.yw / 2),
+					panel->r.yw / 2,
+					panel->r.yw / 2,
+					panel->r.yw / 2));
 	}
 
 	/*
@@ -168,7 +180,7 @@ int AppMain(int argc, char **argv) {
 		if (scan_mode) {
 			//fast_scan(scr, e);
 		} else {
-			//UIDelegate(e, wstack, NUMBER_OF(UIWidget *, wstack));
+			UIDelegate(e, root);
 			UIDraw(scr, root);
 		}
 

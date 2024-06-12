@@ -69,3 +69,12 @@ void Screen::DrawRect(Pixel c, Rect r, Rect clip) {
 	// Right
 	DrawVLine(c, r.p.From(r.xw - 1, 0), r.yw, clip);
 }
+
+Screen* Screen::Subset(Rect r) {
+	return new Screen(
+		pixels + INDEX(pitch, r.p.x, r.p.y),
+		//pixels,
+		r.xw,
+		r.yw,
+		pitch);
+}

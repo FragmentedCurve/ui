@@ -31,5 +31,8 @@ pixelgrab: $(SRC)
 test:
 	$(CXX)  test.cc ui.cc ui_draw.cc os_x11.cc $(CPPFLAGS) -o $@
 
+tone:
+	$(CXX)  tone.cc ui.cc ui_draw.cc os_x11.cc $(CPPFLAGS) -o $@
+
 clean:
-	rm -f pixelgrab
+	rm -f pixelgrab tone test

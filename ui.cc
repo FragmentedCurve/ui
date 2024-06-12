@@ -157,13 +157,15 @@ UIWidget* UIDelegate(Event e, UIWidget* root) {
 }
 
 void UIDraw(Screen* scr, UIWidget* root) {
-	if (!root) return;
+	if (!root || !root->visible)
+		return;
 
-	for (UIWidget* walk = root; walk; walk = walk->prev) {
-		if (walk->visible)
-			walk->Draw(scr);
+	root->Draw(scr);	
+	scr = scr->Subset(root->r);	
+
+	for (UIWidget* walk = root->childhead; walk; walk = walk->next) {
+		UIDraw(scr, walk);
 	}
-	UIDraw(scr, root->childtail);
 }
 
 void UIWidget::Parent(UIWidget* parent) {
@@ -183,8 +185,6 @@ void UIWidget::Parent(UIWidget* parent) {
 		parent->childtail = this;
 		this->parent = parent;
 	}
-
-	Move(r.From(parent->r.p).p);
 }
 
 void UILight::Draw(Screen* scr) {
@@ -215,7 +215,9 @@ void UILight::Draw(Screen* scr) {
 
 void UIToggle::Draw(Screen* scr) {
 	UIButton::Draw(scr);
-	light.Draw(scr);
+	// If `light` doesn't have `this` as it's parent, then we must
+	//draw it here. Otherwise it'll be drawn by UIDraw.
+	//light.Draw(scr);
 }
 
 bool UIToggle::Handle(Event e) {
