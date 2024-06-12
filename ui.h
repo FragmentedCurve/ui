@@ -9,6 +9,8 @@ struct Screen {
 	Screen(uint32_t *pixels, int xw, int yw);
 	Screen(uint32_t *pixels, int xw, int yw, int pitch);
 
+	Screen* Subset(Rect r);
+
 	void DrawHLine(Pixel c, Point p, int width);
 	void DrawHLine(Pixel c, Point p, int width, Rect clip);
 	void DrawVLine(Pixel c, Point p, int height);
@@ -235,8 +237,8 @@ private:
 	void DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0, Pixel c);
 };
 
-//UIWidget* UIDelegate(Event e, UIWidget* root); // TODO: Remove
-UIWidget* UIDelegate(UIState state, UIWidget* root);
+UIWidget* UIDelegate(Event e, UIWidget* root); // TODO: Remove
+//UIWidget* UIDelegate(UIState state, UIWidget* root);
 void UIDraw(Screen* scr, UIWidget* root);
 
 void SetOwner(UIWidget* w, ...);
