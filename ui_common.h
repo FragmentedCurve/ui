@@ -3,19 +3,18 @@
 
 #include <cstdint>
 
+#define UI_INDEX(xw, x, y) ((xw) * (y) + (x))
+
+#ifndef NULL
+#define NULL 0
+#endif
+
 typedef uint32_t Pixel;
 
 #define __RGB(r, g, b) ((Pixel)(((r) & 0xff) << 16 | ((g) & 0xff) << 8 | ((b) & 0xff)))
 #define __BGR(r, g, b) ((Pixel)(((b) & 0xff) << 16 | ((g) & 0xff) << 8 | ((r) & 0xff)))
 
-#define RGB(r, g, b) __RGB(r, g, b)
-
-#define WHITE RGB(255, 255, 255)
-#define BLACK RGB(  0,   0,   0)
-#define RED   RGB(255,   0,   0)
-#define GREEN RGB(  0, 255,   0)
-#define BLUE  RGB(  0,   0, 255)
-
+#define UI_RGB(r, g, b) __RGB(r, g, b)
 
 struct Point {
 	int x = 0;
@@ -75,35 +74,36 @@ struct Rect {
 	}
 };
 
-enum Event {
-	EVENT_NULL,           // Who knows?
-	EVENT_QUIT,           // Quit message from WM
-	EVENT_RESIZE,         // Screen/Window was resized
-	EVENT_MOUSE_BUTTON,   // A mouse button was either pressed or released
-	EVENT_MOUSE_MOVE,     // You figure this one out
-	EVENT_KEY_PRESS,      // Any key was pressed
-	EVENT_KEY_RELEASE,    // Any key was released
-	EVENT_UPDATE_WINDOW,  // UpdateWindow() should be called
-
-	/* TODO
-	   Add events for
-
-	   - Updating the window (basically call UpdateWindow()).
-	   - Screen/window resized.
-	   - Redraw part of the screen.
-	*/
-
-	// --
-
-	EVENT_LAST
+// TODO: UIState needs a better name.
+struct UIState {
+	Point pointer       = Point(0, 0);
+	Point dpointer      = Point(0, 0);
+	bool  m[32]         = {false};
+	char  keys[127]     = {0};
+	int   screen_width  = 0;
+	int   screen_height = 0;
+	bool  halt          = false;
+//TODO:	int   dscreen_width  = 0;  Maybe
+//TODO:	int   dscreen_height = 0;  Maybe
 };
 
 // Provided to the platform by PixelGrab
 extern Point pointer;
 extern bool mouse_buttons[2];
 extern Pixel* screen;
-extern int SCREEN_WIDTH;
-extern int SCREEN_HEIGHT;
+extern const int SCREEN_WIDTH;
+extern const int SCREEN_HEIGHT;
 extern const char* WINDOW_TITLE;
-int AppMain(int argc, char **argv);
+int UIMain(int argc, char **argv);
+
+
+// Platform Dependent, implemented in os_*.cc
+Pixel GetPixel(int x, int y);
+void UpdateWindow();
+void ToClipboard(const char* s);
+UIState UIGetState();
+void GrabMouse();
+void ReleaseMouse();
+void Console(const char* s);
+
 #endif // _UI_COMMON_H_

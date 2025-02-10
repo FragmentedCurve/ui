@@ -1,4 +1,3 @@
-#include "os.h"
 #include "ui.h"
 
 #include <cstdio>
@@ -10,13 +9,15 @@ const int SCAN_HEIGHT = 25;
 const int SCAN_WIDTH = SCAN_HEIGHT * PHI;
 const int GRID_HEIGHT = PIXEL_ZOOM * SCAN_HEIGHT;
 
-UI_DEFINE_GLOBALS("PixelGrab",                    // Window Title
-		  PIXEL_ZOOM * SCAN_WIDTH,        // Window width
-		  PIXEL_ZOOM * SCAN_HEIGHT + 50); // Window  height
+const char* WINDOW_TITLE = "PixelGrab";
+const int SCREEN_WIDTH   = PIXEL_ZOOM * SCAN_WIDTH;
+const int SCREEN_HEIGHT  = PIXEL_ZOOM * SCAN_HEIGHT + 50;
+
+Point pointer;
+bool mouse_buttons[2];
+Pixel* screen;
 
 static bool scan_mode = false;
-// TODO: REMOVE grid
-//static auto grid = (UIPixelSelector*) wstack[3];
 
 /*
 CALLBACK(UIButton, cbExit) {
@@ -114,79 +115,71 @@ static void fast_scan(Screen* scr, Event e) {
 */
 
 struct Logo : UIWidget {
-	Logo(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
+	Logo(UIHandle id, Rect r) : UIWidget(id, r) {}
 	
 	void Draw(Screen* scr) {
 		auto pad = 1;
 		auto width = 10; //r.xw / 2 - pad;
 		auto box = Rect(0, 0, width, width);
 		
-		scr->DrawFill(RED, box.From(width + pad, width + pad).From(r.p));
-		scr->DrawFill(GREEN, box.From(0, width + pad).From(r.p));
-		scr->DrawFill(BLUE, box.From(width + pad, 0).From(r.p));
-		
+		scr->DrawFill(UI_RED, box.From(width + pad, width + pad).From(r.p));
+		scr->DrawFill(UI_GREEN, box.From(0, width + pad).From(r.p));
+		scr->DrawFill(UI_BLUE, box.From(width + pad, 0).From(r.p));
+
 		scr->DrawRect(UI_DARKEST, box.From(width + pad, width + pad).From(r.p));
 		scr->DrawRect(UI_DARKEST, box.From(0, width + pad).From(r.p));
 		scr->DrawRect(UI_DARKEST, box.From(width + pad, 0).From(r.p));
 	}
 };
 
-int AppMain(int argc, char **argv) {
-	Event e;
+enum Handles {
+	ID_ANON,
+	ID_ROOT,
+	ID_PANEL,
+	ID_GRID,
+	ID_BTOGGLE,
+	ID_BEXIT,
+};
+
+int UIMain(int argc, char **argv) {
+	UIState state;
 	UIWidget* root;
 
-	auto scr = new Screen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
-	
-	{ // GUI Tree
-		root = new UIWidget(NULL, Point(0, 0), SCREEN_WIDTH, SCREEN_HEIGHT);
-		
-		auto colorlabel = new HexFloat(root, Point(0, 0));
-		auto grid = new UIPixelSelector(root, Point(0, 0), root->r.xw, GRID_HEIGHT, PIXEL_ZOOM);
+	auto scr = Screen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-		auto panel = new UIPanel(root, Rect(0, grid->r.yw, SCREEN_WIDTH, SCREEN_HEIGHT - grid->r.yw));
-		new UIToggle(panel, Point(5, 5), 100, 40);
-		new UIButton(panel, Point(110, 5), 100, 40);
+	// GUI Tree
+	root = new UIWidget(ID_ROOT, Point(0, 0), SCREEN_WIDTH, SCREEN_HEIGHT);
+	root->Children(
+		new HexFloat(ID_ANON, Point(0, 0)),
+		new UIPixelSelector(ID_GRID, Point(0, 0), root->r.xw, GRID_HEIGHT, PIXEL_ZOOM),
+		(new UIPanel(ID_ANON, Rect(0, GRID_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - GRID_HEIGHT)))
+		->Children(
+			new UIToggle(ID_BTOGGLE, Point(5, 5), 100, 40),
+			new UIButton(ID_BEXIT, Point(110, 5), 100, 40),
+			new Logo(ID_ANON, Rect(SCREEN_WIDTH - (SCREEN_HEIGHT - GRID_HEIGHT) / 2,
+						(SCREEN_HEIGHT - GRID_HEIGHT) / 2,
+						(SCREEN_HEIGHT - GRID_HEIGHT) / 2,
+						(SCREEN_HEIGHT - GRID_HEIGHT) / 2))));
 
-		new Logo(panel, Rect(panel->r.xw - (panel->r.yw / 2),
-					panel->r.yw / 2,
-					panel->r.yw / 2,
-					panel->r.yw / 2));
-	}
+	while (state = UIGetState(), !state.halt) {
+		UIOutput out = UIDelegate(state, root);
 
-	/*
-	// Callbacks
-	wstack[1]->callback = cbScan;
-	wstack[2]->callback = cbExit;
-	wstack[3]->callback = cbGrid;
-
-	// Hooks
-	wstack[3]->prehook[EVENT_MOUSE_MOVE] = hScan;
-	wstack[3]->prehook[EVENT_MOUSE_BUTTON] = hScan;
-	*/
-	
-	// Draw inital screen so it's not blank on startup
-	UIDraw(scr, root);
-	UpdateWindow();
-
-	while ((e = GetEvent()) != EVENT_QUIT) {
-		if (e == EVENT_NULL || e == EVENT_LAST)
-			continue;
-
-		if (e == EVENT_UPDATE_WINDOW) {
-			UpdateWindow();
-			continue;
+		if (out.clicked) {
+			switch (out.clicked->id) {
+			case ID_BTOGGLE: {
+				// TODO: Capture mouse
+				Console(((UIToggle*) out.clicked)->light.on ? "On\n" : "Off\n");
+			} break;
+			case ID_BEXIT: {
+				goto halt;
+			} break;
+			}
 		}
 
-		if (scan_mode) {
-			//fast_scan(scr, e);
-		} else {
-			UIDelegate(e, root);
-			UIDraw(scr, root);
-		}
-
+		UIDraw(&scr, root);
 		UpdateWindow();
 	}
 
-	delete scr;
+halt:
 	return 0;
 }

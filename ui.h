@@ -1,129 +1,153 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#include "ui_common.h"
-#include "ui_util.h"
+#include <cstdarg>
 
+#include "ui_common.h"
+#include "ui_style.h"
+
+// TODO: Split Screen into a framebuffer class and an abstract
+// class. The abstract class should just define the minimum methods a
+// backend renderer requires.
 struct Screen {
-	Screen(int xw, int yw);
+	Screen(int xw, int yw); // TODO: Abstract renderer
 	Screen(uint32_t *pixels, int xw, int yw);
 	Screen(uint32_t *pixels, int xw, int yw, int pitch);
 
-	Screen* Subset(Rect r);
+	Screen* Subset(Rect r);// TODO: Abstract renderer
+	void Resize(int xw, int yw);
 
-	void DrawHLine(Pixel c, Point p, int width);
-	void DrawHLine(Pixel c, Point p, int width, Rect clip);
-	void DrawVLine(Pixel c, Point p, int height);
-	void DrawVLine(Pixel c, Point p, int height, Rect clip);
-	void DrawFill(Pixel c, Rect r);
-	void DrawRect(Pixel c, Rect r);
-	void DrawRect(Pixel c, Rect r, Rect clip);
+	void DrawHLine(Pixel c, Point p, int width);// TODO: Abstract renderer
+	void DrawHLine(Pixel c, Point p, int width, Rect clip);// TODO: Abstract renderer
+	void DrawVLine(Pixel c, Point p, int height);// TODO: Abstract renderer
+	void DrawVLine(Pixel c, Point p, int height, Rect clip);// TODO: Abstract renderer
+	void DrawFill(Pixel c, Rect r);// TODO: Abstract renderer
+	void DrawRect(Pixel c, Rect r);// TODO: Abstract renderer
+	void DrawRect(Pixel c, Rect r, Rect clip);// TODO: Abstract renderer
 
 	int xw, yw, pitch;
 	uint32_t *pixels;
 };
 
-enum UIColors {
-	UI_DARKEST        = RGB(   0,    0,    0),
-	UI_LIGHTEST       = RGB(0xff, 0xff, 0xff),
-	UI_SURFACE_BG     = RGB(0xde, 0xdb, 0xde), // TODO: Rename this, "BG" isn't properly descriptive.
-	UI_SURFACE_FG     = RGB(0xe8, 0xe8, 0xe8), // TODO: Rename for the same reasons above.
-	UI_SURFACE_HILITE = RGB(0xf0, 0xf0, 0xf0),
-	UI_SURFACE_SHADOW = RGB(0xa0, 0xa0, 0xa0),
-	UI_SURFACE_BORDER = RGB(   0,    0,    0),
-	UI_TEXT_BG        = RGB(0xff, 0xff, 0xff),
-	UI_TEXT_FG        = RGB(   0,    0,    0),
-	UI_TEXT_BORDER    = RGB(0x2e, 0x2e, 0x2e),
-	UI_LIGHT_BORDER   = RGB(0x2e, 0x2e, 0x2e),
-	UI_LIGHT_ON       = RGB(0xff, 0xd1, 0x66), // TODO: Potential alternative default (green): 0x00cd00
-	UI_LIGHT_OFF      = RGB(0xde, 0xdb, 0xde),
-};
-
-// TODO: Change "EVENT_" prefix and reduce to only 2 results.
-//enum EventOutcome { EVENT_UNHANDLED, EVENT_PROCESSED, EVENT_ABSORBED };
-
-typedef void (*UICallback)(struct UIWidget*, Event, void*);
-typedef bool (*UIHandler)(struct UIWidget*, Event);
-
+typedef int UIHandle;
+  
 struct UIWidget {
-	UIWidget(UIWidget* parent) {
-		Parent(parent);
-	}
-	UIWidget(UIWidget* parent, Rect r) : r(r) {
-		Parent(parent);
-	}
-	UIWidget(UIWidget* parent, Point pos, int xw, int yw) : r(pos, xw, yw) {
-		Parent(parent);
+	UIWidget(UIHandle id) : id(id) { }
+	UIWidget(UIHandle id, Rect r) : id(id), r(r) { }
+	UIWidget(UIHandle id, Point pos, int xw, int yw) : id(id), r(pos, xw, yw) { }
+
+	virtual UIWidget* Hit(Point p) {
+		if (!r.Hit(p) || !visible) {
+			return NULL;
+		}
+
+		// this is the new parent so p must be relative to this.r
+		p = Point(p.x - r.p.x, p.y - r.p.y);
+
+		for (UIWidget* walk = childtail; walk; walk = walk->prev) {
+			UIWidget* hit = walk->Hit(p);
+			if (hit) {
+				return hit;
+			}
+		}
+
+		return this;
 	}
 
-	virtual bool Hit(Point p) {
-		return Hit(p.x, p.y);
+	virtual UIWidget* Hit(int x, int y) {
+		return Hit(Point(x, y));
 	}
 
-	virtual bool Hit(int x, int y) {
-		return r.Hit(x, y);
-	}
+	virtual void HandlePress(Point) {}
+	virtual void HandleClick(Point) {}
 
 	virtual void Draw(Screen *scr) {}
 
-	virtual bool Handle(Event e) {
-		return HANDLED_FAILURE;
-	}
-
-	void Move(int x, int y) {
+	virtual void Move(int x, int y) {
 		r = Rect(x, y, r.xw, r.yw);
 	}
 
-	void Move(Point p) {
+	virtual void Move(Point p) {
 		Move(p.x, p.y);
 	}
 
-	void Push(int x, int y) {
+	virtual void Push(int x, int y) {
 		r = r.From(x, y);
 	}
 	
-	void Push(Point p) {
+	virtual void Push(Point p) {
 		Push(p.x, p.y);
 	}
-	
-	void Resize(int dx, int dy) {
+
+	virtual void Resize(int dx, int dy) {
 		r = r.Resize(dx, dy);
 	}
 
-	void Parent(UIWidget* p);
-	
-	Rect r = Rect(0, 0, 0, 0);
+	Rect Abs() {
+		Rect result = r;
+		for (UIWidget* walk = parent; walk; walk = walk->parent) {
+			result = result.From(walk->r.p);
+		}
+		return result;
+	}
+
+	UIWidget* Parent(UIWidget* parent) {
+		if (!parent) {
+			return this;
+		}
+
+		if (parent->childhead) {
+			next = parent->childhead;
+			next->prev = this;
+			parent->childhead = this;
+			this->parent = parent;
+		} else {
+			next = NULL;
+			prev = NULL;
+			parent->childhead = this;
+			parent->childtail = this;
+			this->parent = parent;
+		}
+
+		return this;
+	}
+
+	UIWidget* Children(UIWidget* w, ...) {
+		if (!w) {
+			return this;
+		}
+		w->Parent(this);
+
+		va_list ap;
+		va_start(ap, w);
+		for (UIWidget* child = va_arg(ap, UIWidget*); child; child = va_arg(ap, UIWidget*)) {
+			child->Parent(this);
+		}
+		va_end(ap);
+
+		return this;
+	}
+#define Children(...) Children(__VA_ARGS__, NULL) // TODO: Is there a better C++ way to do this?
 
 
 	// Children (subtree)
-	UIWidget* childhead = NULL;
-	UIWidget* childtail = NULL;
-
-	// Siblings
-	UIWidget* next = NULL;
-	UIWidget* prev = NULL;
-
-	// Our Parent
-	UIWidget* parent = NULL;
+	UIWidget* childhead = NULL; // Youngest child
+	UIWidget* childtail = NULL; // Oldest child
+	UIWidget* next      = NULL; // Older sibling
+	UIWidget* prev      = NULL; // Younger sibling
+	UIWidget* parent    = NULL; // Our Parent
 
 	// Properties
-	bool visible = true;   // Widget is active and visable.
-
-	// Called when the widget executes it's behavior.
-	UICallback callback = NULL;
-
-	// Call before the handler is called.
-	UIHandler prehook[EVENT_LAST] = {0};
-
-	// Replace the default handler.
-	UIHandler hook[EVENT_LAST] = {0};
-
-	// Call after the handler is called.
-	UIHandler posthook[EVENT_LAST] = {0};
+	UIHandle id       = -1;               // Unique ID of widget instance
+	Rect     r        = Rect(0, 0, 0, 0); // The widget's real estate.
+	bool     visible  = true;             // Widget is active and visable.
+	bool     disabled = false;            // Widget is visible but not functional.
+	bool     pressed  = false;            // Pressed with left mouse button.
+	bool     drag     = false;
 };
 
 struct UISurface : UIWidget {
-	UISurface(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
+	UISurface(UIHandle id, Rect r) : UIWidget(id, r) {}
 
 	virtual void Draw(Screen* scr) {
 		scr->DrawFill(UI_SURFACE_SHADOW, r);
@@ -131,7 +155,7 @@ struct UISurface : UIWidget {
 };
 
 struct UIPanel : UIWidget {
-	UIPanel(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
+	UIPanel(UIHandle id, Rect r) : UIWidget(id, r) {}
 
 	virtual void Draw(Screen* scr) {
 		scr->DrawFill(UI_SURFACE_BG, r);
@@ -139,36 +163,35 @@ struct UIPanel : UIWidget {
 };
 
 struct UILight : UIWidget {
-	UILight(UIWidget* parent, Point position) : UIWidget(parent, position, 16, 16) {}
-	UILight(UIWidget* parent, Rect r) : UIWidget(parent, r) {}
+	UILight(UIHandle id, Point position) : UIWidget(id, position, 16, 16) {}
+	UILight(UIHandle id, Rect r) : UIWidget(id, r) {}
 	virtual void Draw(Screen *scr);
+
 	void On() { on = true; }
 	void Off() { on = false; }
 	void Toggle() { on = !on; }
 	bool State() { return on; }
 
-private:
+	// Properties
 	bool on = false;
 };
 
 struct UIButton : UIWidget {
-	UIButton(UIWidget* parent, Point position, int xw, int yw) : UIWidget(parent, position, xw, yw) {}
-
+	UIButton(UIHandle id, Point position, int xw, int yw) : UIWidget(id, position, xw, yw) {}
 	void Draw(Screen* scr);
-	virtual bool Handle(Event e);
 
-	bool Pressed() { return pressed; }
-	
+	// Properties
+	char* caption;
+
 private:
 	void Draw(Screen* scr, Pixel hilite, Pixel shadow, Pixel bg);
-	char* label;
-	bool pressed = false;
 };
 
 struct UIToggle : UIButton {
-	UIToggle(UIWidget* parent, Point p, int xw, int yw)
-	  : UIButton(parent, p, xw, yw), light(this, Rect(8, 8, 16, yw - 16)) { }
-	
+	UIToggle(UIHandle id, Point p, int xw, int yw)
+		: UIButton(id, p, xw, yw), light(id, Rect(8, 8, 16, yw - 16)) {
+	}
+
 	virtual void Move(int x, int y) {
 		UIWidget::Move(x, y);
 		light.Move(x, y);
@@ -178,25 +201,25 @@ struct UIToggle : UIButton {
 		UIWidget::Resize(xw, yw);
 		light.Resize(0, yw);
 	}
-	
+
+	virtual void HandleClick(Point p) {
+		Toggle();
+	}
+
 	void Toggle() { light.Toggle(); }
 	void On() { light.On(); }
 	void Off() { light.Off(); }
 
 	virtual void Draw(Screen *scr);
-	virtual bool Handle(Event e);
-
-private:
-	bool toggle = false;
 	UILight light;
 };
 
 struct UIPixelGrid : UIWidget {
-	UIPixelGrid(UIWidget* parent, Point position, int xw, int yw , int zoom);
+	UIPixelGrid(UIHandle id, Point position, int xw, int yw , int zoom);
 	virtual ~UIPixelGrid();
 	void Draw(Screen* scr);
-	Pixel Get(int x, int y) { return pixels[INDEX(cols, x, y)]; }
-	void Set(Pixel c, int x, int y) { pixels[INDEX(cols, x, y)] = c; }
+	Pixel Get(int x, int y) { return pixels[UI_INDEX(cols, x, y)]; }
+	void Set(Pixel c, int x, int y) { pixels[UI_INDEX(cols, x, y)] = c; }
 
 //protected:
 	void DrawCell(Screen* scr, int x, int y);
@@ -207,14 +230,14 @@ struct UIPixelGrid : UIWidget {
 };
 
 struct UIPixelSelector : UIPixelGrid {
-	UIPixelSelector(UIWidget* parent, Point position, int xw, int yw, int zoom)
-		: UIPixelGrid(parent, position, xw, yw, zoom) {
+	UIPixelSelector(UIHandle id, Point position, int xw, int yw, int zoom)
+		: UIPixelGrid(id, position, xw, yw, zoom) {
 		select = prev_select = Point(cols / 2, rows / 2);
 	}
 	void Select(int x, int y);
 	Pixel Get() { return UIPixelGrid::Get(select.x, select.y); }
 	virtual void Draw(Screen* scr);
-	virtual bool Handle(Event e);
+	virtual void HandleClick(Point p);
 
 protected:
 	Point select, prev_select;
@@ -226,8 +249,8 @@ private:
 };
 
 struct HexFloat : UIWidget {
-	HexFloat(UIWidget* parent) : UIWidget(parent, Point(0, 0), 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
-	HexFloat(UIWidget* parent, Point p) : UIWidget(parent, p, 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
+	HexFloat(UIHandle id) : UIWidget(id, Point(0, 0), 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
+	HexFloat(UIHandle id, Point p) : UIWidget(id, p, 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
 	void Draw(Screen* scr);
 	void Set(Pixel c);
 
@@ -237,11 +260,16 @@ private:
 	void DrawFont(Screen* scr, bool *gylph, int len, int x0, int y0, Pixel c);
 };
 
-UIWidget* UIDelegate(Event e, UIWidget* root); // TODO: Remove
-//UIWidget* UIDelegate(UIState state, UIWidget* root);
+// This is the compliment of UIState.
+// TODO: UIOutput needs a better name.
+struct UIOutput {
+	UIWidget* pressed;
+	UIWidget* clicked;
+};
+
+// TODO: UIDelegate needs a new name. It's doing transformations
+// instead of delegations now.
+UIOutput UIDelegate(UIState state, UIWidget* root);
 void UIDraw(Screen* scr, UIWidget* root);
 
-void SetOwner(UIWidget* w, ...);
-void ReleaseOwner(UIWidget* w);
-void ReleaseOwner(UIWidget* w, int e, ...);
 #endif // _UI_H_

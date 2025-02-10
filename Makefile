@@ -1,5 +1,7 @@
-SRC = main.cc ui.cc ui_draw.cc
-CPPFLAGS = -Wall -Wno-switch
+DEBUG=
+
+SRC = main.cc ui.cc ui_draw.cc ui_font.cc
+CPPFLAGS = -Wall -Wno-switch -I/usr/local/include -L/usr/local/lib -ggdb -O0 -D _DEBUG -pg
 
 ifdef WINDOWS
 SRC += os_win32.cc
@@ -29,10 +31,10 @@ pixelgrab: $(SRC)
 .PHONY: test
 
 test:
-	$(CXX)  test.cc ui.cc ui_draw.cc os_x11.cc $(CPPFLAGS) -o $@
+	$(CXX)  test.cc ui.cc ui_draw.cc ui_font.cc os_x11.cc $(CPPFLAGS) -o $@
 
 tone:
-	$(CXX)  tone.cc ui.cc ui_draw.cc os_x11.cc $(CPPFLAGS) -o $@
+	$(CXX)  tone.cc ui.cc ui_font.cc ui_draw.cc os_x11.cc $(CPPFLAGS) -o $@
 
 clean:
 	rm -f pixelgrab tone test

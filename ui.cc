@@ -1,7 +1,4 @@
 #include "ui.h"
-#include "os.h"
-
-#include "font.h"
 
 #include <cstdarg>
 #include <cassert>
@@ -9,181 +6,76 @@
 /*
   TODO
 
-  - Smooth out how a widget gets drawn. Depending on the this->paint
-    bool feels sketchy but it might be good enough.
-
-  - Make gaining ownership of an event more robust and safe.
-
-  - Provide more consistency across widget classes. For example, if a
-    widget has a toggle state, provide the same interface for toggling
-    across all toggle-capable widgets.
-
-  - Write helper functions and macros for common tasks performed by
-    widgets.
-
   - Bitmap drawing and manipulation.
 
   - Builtin fonts.
+
+  - Implement machine states.  
+
+  - Reimplement all handlers based on machine states.
+
+  - Divide headers into ui_core.h, ui_widgets.h, ui_platform.h, ui_style.h and maybe ui_assets.h.
  */
+#include <iostream>
 
-UIWidget *event_owner[EVENT_LAST] = {0};
+UIOutput UIDelegate(UIState state, UIWidget* root) {
+	UIOutput out = {
+		.pressed = NULL,
+		.clicked = NULL,
+	};
 
-void SetOwner(UIWidget *w, Event e) {
-	assert(event_owner[e] == NULL || event_owner[e] == w);
-	event_owner[e] = w;
-}
+	static UIState pstate; // Previous state
+	static UIOutput pout;  // Previous output
 
-void SetOwner(UIWidget* w, ...) {
-	// Event gets promated to int when passed as a variadic
-	// argument.
-	int e;
-	va_list ap;
+	// TODO: General for more than left click Handle primary
+	// pointer clicks
+	if (state.m[0] && !pstate.m[0]) {
+		// Something was pressed.
+		out.pressed = root->Hit(state.pointer);
+		if (out.pressed) {
+			out.pressed->pressed = true;
+			out.pressed->HandlePress(state.pointer);
+		}
+	} else if (!state.m[0] && pstate.m[0]) {
+		// Something might've been clicked.
+		if (pout.pressed && (root->Hit(state.pointer) == pout.pressed)) {
+			out.clicked = pout.pressed;
+			out.clicked->HandleClick(state.pointer);
+		}
 
-	va_start(ap, w);
-	while ((e = va_arg(ap, int)) != EVENT_NULL) {
-		assert(event_owner[e] == NULL || event_owner[e] == w);
-		event_owner[e] = w;
-	}
-	va_end(ap);
-}
-
-void ReleaseOwner(UIWidget* w) {
-	for (int i = 0; i < EVENT_LAST; i++)
-		if (event_owner[i] == w)
-			event_owner[i] = NULL;
-}
-
-void ReleaseOwner(UIWidget *w, Event e) {
-	assert(event_owner[e] == NULL || event_owner[e] == w);
-	event_owner[e] = NULL;
-}
-
-void ReleaseOwner(UIWidget* w, int e, ...) {
-	// Event gets promated to int when passed as a variadic
-	// argument.
-	va_list ap;
-
-	assert(event_owner[e] == NULL || event_owner[e] == w);
-	event_owner[e] = NULL;
-
-	va_start(ap, e);
-	while ((e = va_arg(ap, int)) != EVENT_NULL) {
-		assert(event_owner[e] == NULL || event_owner[e] == w);
-		event_owner[e] = NULL;
-	}
-	va_end(ap);
-}
-
-#define SET_OWNER(...) SetOwner(this, __VA_ARGS__, EVENT_NULL)
-#define RELEASE_OWNER(...) ReleaseOwner(this, __VA_ARGS__, EVENT_NULL)
-
-static bool HandleWidget(Event e, UIWidget* w) {
-	bool result = HANDLED_FAILURE;
-
-	if (w->prehook[e])
-		result = w->prehook[e](w, e) || result;
-	
-	if (w->hook[e])
-		result = w->hook[e](w, e) || result;
-	else
-		result = w->Handle(e);
-
-	if (w->posthook[e])
-		result = w->posthook[e](w, e) || result;
-
-	// TODO: This boolean result doesn't clearly convey the
-	// status. UIHandler's return type needs to help clarify what
-	// action should be taken next.
-	//
-	// For example, should there be a method of a prehook
-	// preventing further handler execution?
-	
-	return result;
-}
-
-/*
-UIWidget* UIDelegate(Event e, UIWidget* w[], int n) {
-	// Catch programming mistakes.
-	assert(e != EVENT_NULL);
-	assert(e != EVENT_LAST);
-	
-	// If the event has an owner, ignore normal processing and
-	// delegate directly to the owner.
-	if (event_owner[e]) {
-		HandleWidget(e, event_owner[e]);
-		return event_owner[e];
+		// Otherwise, no click, only a release
+		if (pout.pressed) {
+			pout.pressed->pressed = false;
+		}
+	} else {
+		// Previously pressed persists
+		out.pressed = pout.pressed;
 	}
 
-	for (int i = 0; i < n; i++) {
-		if (!w[i]->visible)
-			continue;
+	// TODO: Should drags be a property and handled here?
 
-		if ((e == EVENT_MOUSE_BUTTON || e == EVENT_MOUSE_MOVE) && !w[i]->Hit(pointer))
-			continue;
-
-		if (HandleWidget(e, w[i]) == HANDLED_SUCCESS)
-			return w[i];
+	if (state.screen_width != pstate.screen_width || state.screen_height != pstate.screen_height) {
+		// Screen was resized.
+		// TODO: Implement layout logic & classes
+		int dx = state.screen_width - pstate.screen_width;
+		int dy = state.screen_height - pstate.screen_height;
+		root->Resize(dx, dy);
 	}
 
-	return NULL;
-}
-*/
-
-UIWidget* UIDelegate(Event e, UIWidget* root) {
-  /*
-	// Catch programming mistakes.
-	assert(e != EVENT_NULL);
-	assert(e != EVENT_LAST);
-	
-	// If the event has an owner, ignore normal processing and
-	// delegate directly to the owner.
-	if (event_owner[e]) {
-		HandleWidget(e, event_owner[e]);
-		return event_owner[e];
-	}
-
-	for (int i = 0; i < n; i++) {
-		if (!w[i]->visible)
-			continue;
-
-		if ((e == EVENT_MOUSE_BUTTON || e == EVENT_MOUSE_MOVE) && !w[i]->Hit(pointer))
-			continue;
-
-		if (HandleWidget(e, w[i]) == HANDLED_SUCCESS)
-			return w[i];
-	}
-  */
-	return NULL;
+	pstate = state;
+	pout = out;
+	return out;
 }
 
 void UIDraw(Screen* scr, UIWidget* root) {
 	if (!root || !root->visible)
 		return;
 
-	root->Draw(scr);	
-	scr = scr->Subset(root->r);	
+	root->Draw(scr);
+	scr = scr->Subset(root->r);
 
 	for (UIWidget* walk = root->childhead; walk; walk = walk->next) {
 		UIDraw(scr, walk);
-	}
-}
-
-void UIWidget::Parent(UIWidget* parent) {
-	if (!parent) {
-		return;
-	}
-
-	if (parent->childhead) {
-		next = parent->childhead;
-		next->prev = this;
-		parent->childhead = this;
-		this->parent = parent;
-	} else {
-		next = NULL;
-		prev = NULL;
-		parent->childhead = this;
-		parent->childtail = this;
-		this->parent = parent;
 	}
 }
 
@@ -215,13 +107,7 @@ void UILight::Draw(Screen* scr) {
 
 void UIToggle::Draw(Screen* scr) {
 	UIButton::Draw(scr);
-	// If `light` doesn't have `this` as it's parent, then we must
-	//draw it here. Otherwise it'll be drawn by UIDraw.
-	//light.Draw(scr);
-}
-
-bool UIToggle::Handle(Event e) {
-	return UIButton::Handle(e);
+	light.Draw(scr->Subset(r));
 }
 
 void HexFloat::Set(Pixel c) {
@@ -268,11 +154,11 @@ void HexFloat::Draw(Screen* scr) {
 
 		Pixel color;
 		if (i == 1 || i == 2)
-			color = RGB(0xc0, 0, 0); // 0xc00000;
+			color = UI_RGB(0xc0, 0, 0); // 0xc00000;
 		else if (i == 3 || i == 4)
-			color = RGB(0, 0xc0, 0); // 0x00c000;
+			color = UI_RGB(0, 0xc0, 0); // 0x00c000;
 		else
-			color = RGB(0, 0, 0xc0); // 0xc0;
+			color = UI_RGB(0, 0, 0xc0); // 0xc0;
 
 		DrawFont(scr, gylphs[c], sizeof(gylphs[c]), r.p.x + (5 + 8 * i), r.p.y + 8, color);
 	}
@@ -308,35 +194,7 @@ void UIButton::Draw(Screen* scr, Pixel hilite, Pixel shadow, Pixel bg) {
 	scr->DrawRect(UI_DARKEST, r);
 }
 
-bool UIButton::Handle(Event e) {
-	if (e != EVENT_MOUSE_BUTTON && e != EVENT_MOUSE_MOVE)
-		return HANDLED_FAILURE;
-
-	if (Hit(pointer)) {
-		if (!pressed && mouse_buttons[0]) {
-			pressed = true;
-			SET_OWNER(EVENT_MOUSE_MOVE, EVENT_MOUSE_BUTTON);
-		} else if (pressed && !mouse_buttons[0]) {
-			ReleaseOwner(this);
-			pressed = false;
-			if (callback)
-				callback(this, e, NULL);
-		}
-		return HANDLED_SUCCESS;
-	} else {
-		if (pressed && mouse_buttons[0]) {
-			return HANDLED_SUCCESS;
-		} else if (pressed && !mouse_buttons[0]) {
-			ReleaseOwner(this);
-			pressed = false;
-			return HANDLED_SUCCESS;
-		}
-	}
-
-	return HANDLED_FAILURE;
-}
-
-UIPixelGrid::UIPixelGrid(UIWidget* parent, Point position, int xw, int yw, int zoom) : UIWidget(parent, position, xw, yw) {
+UIPixelGrid::UIPixelGrid(UIHandle id, Point position, int xw, int yw, int zoom) : UIWidget(id, position, xw, yw) {
 	cols = xw / zoom;
 	rows = yw / zoom;
 	this->zoom = zoom;
@@ -370,7 +228,7 @@ void UIPixelGrid::DrawCell(Screen* scr, int x, int y) {
 	auto p1 = p0.From(zoom, zoom);
 
 	// Fill square
-	scr->DrawFill(pixels[INDEX(cols, x, y)], Rect(p0, p1));
+	scr->DrawFill(pixels[UI_INDEX(cols, x, y)], Rect(p0, p1));
 
 	// Draw border
 	scr->DrawHLine(UI_DARKEST, p0, zoom);
@@ -384,7 +242,7 @@ void UIPixelGrid::DrawCell(Screen* scr, int x, int y) {
 
 void UIPixelSelector::DrawSelection(Screen* scr) {
 	// Weird inverted color
-	auto c = (WHITE ^ pixels[INDEX(cols, select.x, select.y)]) | RED;
+	auto c = (UI_WHITE ^ pixels[UI_INDEX(cols, select.x, select.y)]) | UI_RED;
 
 	auto p0 = CellPosition(select.x, select.y);
 	auto p1 = p0.From(zoom + 1, zoom + 1);
@@ -421,28 +279,8 @@ void UIPixelSelector::EraseSelection(Screen* scr) {
 	DrawCell(scr, prev_select.x - 1, prev_select.y);
 }
 
-bool UIPixelSelector::Handle(Event e) {
-	if (e != EVENT_MOUSE_BUTTON && e != EVENT_MOUSE_MOVE)
-		return HANDLED_FAILURE;
-
-	// Ignore left click if we're not already engaged.
-	if (!pressed && !Hit(pointer))
-		return HANDLED_FAILURE;
-
-	// Filter for left click only
-	if (!mouse_buttons[0] && !pressed)
-		return HANDLED_FAILURE;
-
-	if (mouse_buttons[0] && !pressed) {
-		// Left button pressed
-		SET_OWNER(EVENT_MOUSE_BUTTON, EVENT_MOUSE_MOVE);
-		pressed = true;
-	} else if (!mouse_buttons[0] && pressed) {
-		// Left button released
-		RELEASE_OWNER(EVENT_MOUSE_BUTTON, EVENT_MOUSE_MOVE);
-		pressed = false;
-	}
-
+void UIPixelSelector::HandleClick(Point p) {
+/*
 	auto p = pointer.From(r.p);
 	p.x /= zoom;
 	p.y /= zoom;
@@ -455,11 +293,7 @@ bool UIPixelSelector::Handle(Event e) {
 
 	prev_select = select;
 	select = p;
-
-	if (callback)
-		callback(this, e, NULL);
-
-	return HANDLED_SUCCESS;
+*/
 }
 
 void UIPixelSelector::Draw(Screen* scr) {

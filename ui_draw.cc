@@ -24,7 +24,7 @@ void Screen::DrawHLine(Pixel c, Point p, int width, Rect clip) {
 		width = clip.p.x + clip.xw - p.x;
 
 	while (--width >= 0)
-		pixels[INDEX(pitch, p.x + width, p.y)] = c;
+		pixels[UI_INDEX(pitch, p.x + width, p.y)] = c;
 }
 
 void Screen::DrawVLine(Pixel c, Point p, int height) {
@@ -47,7 +47,7 @@ void Screen::DrawVLine(Pixel c, Point p, int height, Rect clip) {
 		height = clip.p.y + clip.yw - p.y;
 
 	while (--height >= 0)
-		pixels[INDEX(pitch, p.x, p.y + height)] = c;
+		pixels[UI_INDEX(pitch, p.x, p.y + height)] = c;
 }
 
 void Screen::DrawFill(Pixel c, Rect r) {
@@ -71,10 +71,24 @@ void Screen::DrawRect(Pixel c, Rect r, Rect clip) {
 }
 
 Screen* Screen::Subset(Rect r) {
-	return new Screen(
-		pixels + INDEX(pitch, r.p.x, r.p.y),
-		//pixels,
-		r.xw,
-		r.yw,
-		pitch);
+	return new Screen(pixels + UI_INDEX(pitch, r.p.x, r.p.y), r.xw, r.yw, pitch);
 }
+
+/* TODO: Implement Resize
+void Screen::Resize(int xw, int xy) {
+	if (xw < this->xw && yw< this->yw) {
+		return;
+	}
+
+	if (xw * yw <= (this->xw + pitch) * this->yw) {
+		this->xw = xw;
+		this->xy = yw;
+		this->pitch =
+			// (pitch + xw)
+	}
+
+	if (xw < this->xw && yw < this->yw) {
+		return;
+	}
+}
+*/

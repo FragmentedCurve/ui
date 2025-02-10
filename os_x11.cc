@@ -17,7 +17,7 @@ static Window main_window;
 static XImage* image;
 static const char* clipboard_text;
 
-static auto mouse_grabbed = false;
+//static auto mouse_grabbed = false;
 
 void Console(const char *s) {
 	printf("%s", s);
@@ -57,7 +57,7 @@ Pixel GetPixel(int x, int y) {
 		.bytes_per_line = sizeof(Pixel),
 		.bits_per_pixel = 32,
 	};
-	
+
 	XInitImage(&i);
 	XGetWindowAttributes(display, DefaultRootWindow(display), &attr);
 	
@@ -119,69 +119,62 @@ static void FillSelectionRequest(XEvent event) {
 	XSendEvent(display, e.requestor, false, 0,(XEvent *)&e);
 }
 
-static Event XEventToEvent(XEvent event) {
-	switch (event.type) {
-	case ClientMessage:
-		// Assume the window was closed.
-		return EVENT_QUIT;
-	case ButtonPress:
-		if (event.xbutton.button == 1)
-			mouse_buttons[0] = true;
-		else if (event.xbutton.button == 3)
-			mouse_buttons[1] = true;
-		else
-			return EVENT_NULL;
+UIState UIGetState() {
+	XEvent event;
+	int x, y;
+	static UIState s;
 
-		pointer.x = event.xbutton.x;
-		pointer.y = event.xbutton.y;
+	Window root_return;
+	Window child_return;
+	int root_x, root_y;
+	unsigned int mask;
 
-		return EVENT_MOUSE_BUTTON;
-	case ButtonRelease:
-		if (event.xbutton.button == 1)
-			mouse_buttons[0] = false;
-		else if (event.xbutton.button == 3)
-			mouse_buttons[1] = false;
-		else
-			return EVENT_NULL;
+	XWindowAttributes attr;
 
-		pointer.x = event.xbutton.x;
-		pointer.y = event.xbutton.y;
+	(void) XGetWindowAttributes(display, main_window, &attr);
 
-		return EVENT_MOUSE_BUTTON;
-	case MotionNotify:
-		pointer.x = event.xmotion.x;
-		pointer.y = event.xmotion.y;
-		return EVENT_MOUSE_MOVE;
-	case KeyPress:
-		return EVENT_KEY_PRESS;
-	case SelectionRequest:
-		FillSelectionRequest(event);
-		return EVENT_NULL;
-	case Expose:
-		return EVENT_UPDATE_WINDOW;
+	s.screen_width = attr.width;
+	s.screen_height = attr.height;
+
+	if (XQueryPointer(display, main_window, &root_return, &child_return, &root_x, &root_y, &x, &y, &mask)) {
+		s.dpointer = Point(x - s.pointer.x, y - s.pointer.y);
+		s.pointer.x = x;
+		s.pointer.y = y;
+	} else {
+		s.dpointer = Point(0, 0);
 	}
 
-	return EVENT_NULL;
-}
-
-Event PeekEvent() {
-	XEvent event;
-
 	XNextEvent(display, &event);
-	XPutBackEvent(display, &event);
+	switch (event.type) {
+	case ClientMessage: {
+		// Assume the window was closed.
+		s.halt = true;
+	} break;
+	case ButtonPress: {
+		if (event.xbutton.button == 1)
+			s.m[0] = true;
+		else if (event.xbutton.button == 3)
+			s.m[1] = true;
+	} break;
+	case ButtonRelease: {
+		if (event.xbutton.button == 1)
+			s.m[0] = false;
+		else if (event.xbutton.button == 3)
+			s.m[1] = false;
+	} break;
+	case KeyPress:
+		break;
+	case SelectionRequest:
+		FillSelectionRequest(event);
+		break;
+	}
 
-	return XEventToEvent(event);
-}
-
-Event GetEvent() {
-	XEvent xevent;
-	XNextEvent(display, &xevent);
-	return XEventToEvent(xevent);
+	return s;
 }
 
 int main(int argc, char** argv) {
 	int status;
-	XShmSegmentInfo shmseg;
+	XShmSegmentInfo shmseg; // TODO: Clean this up at exit (not when returning from main).
 
 	display = XOpenDisplay(NULL);
 	if (!display) {
@@ -191,6 +184,7 @@ int main(int argc, char** argv) {
 
 	{ // Create windows
 		main_window = XCreateSimpleWindow(display, RootWindow(display, 0), 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 5, BlackPixel(display, 0), WhitePixel(display, 0));
+
 		XStoreName(display, main_window, WINDOW_TITLE);
 		XResizeWindow(display, main_window, SCREEN_WIDTH, SCREEN_HEIGHT);
 	}
@@ -215,7 +209,15 @@ int main(int argc, char** argv) {
 	{ // Initialize event listening
 		Atom del_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
 		XSetWMProtocols(display, main_window, &del_window, 1);
-		XSelectInput(display, main_window, ExposureMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask | KeyPressMask | KeyReleaseMask);
+		XSelectInput(display, main_window,
+			ResizeRedirectMask
+			| PointerMotionMask
+			| ExposureMask
+			| ButtonPressMask
+			| ButtonReleaseMask
+			| ButtonMotionMask
+			| KeyPressMask
+			| KeyReleaseMask);
 	}
 
 	{ // Setup Shm for quick rendering
@@ -228,6 +230,12 @@ int main(int argc, char** argv) {
 				IPC_PRIVATE,
 				SCREEN_WIDTH * SCREEN_HEIGHT * DefaultDepth(display, DefaultScreen(display)),
 				IPC_CREAT | 0777);
+
+			if (shmseg.shmid <= -1) {
+				perror("shmget() failed");
+				exit(1);
+			}
+
 			shmseg.shmaddr = image->data = (char *)shmat(shmseg.shmid, 0, 0);
 			shmseg.readOnly = false;
 			XShmAttach(display, &shmseg);
@@ -243,12 +251,17 @@ int main(int argc, char** argv) {
 	XMapWindow(display, main_window);
 
 	// Run Pixel Grab
-	status = AppMain(argc, argv);
+	status = UIMain(argc, argv);
 
 	// Cleanup
 	XShmDetach(display, &shmseg);
+	XFree(image);
 	XDestroyWindow(display, main_window);
 	XCloseDisplay(display);
+
+	if (shmdt(shmseg.shmaddr) == -1) {
+		perror("shmdt");
+	}
 
 	return status;
 }
