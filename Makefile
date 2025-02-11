@@ -1,20 +1,26 @@
-all: ui dtmf pixelgrab
+EXAMPLES=dtmf pixelgrab
+CXXFLAGS+= -I/usr/local/include -fPIC -Wall
+
+.ifdef DEBUG
+CXXFLAGS+= -ggdb -O0 -pg
+.endif
+
+EXAMPLES:=${EXAMPLES:@.EX.@examples/${.EX.}/${.EX.}@}
+
+all: ui examples
 ui: src/libui.a
-dtmf: examples/dtmf/dtmf
-pixelgrab: examples/pixelgrab/pixelgrab
+examples: ${EXAMPLES}
 
 src/libui.a:
-	${MAKE} -C src
+	${MAKE} CXXFLAGS+="${CXXFLAGS}" -C src
 
-examples/dtmf/dtmf: ui
-	${MAKE} -C examples/dtmf
-
-examples/pixelgrab/pixelgrab: ui
-	${MAKE} -C examples/pixelgrab
+${EXAMPLES}: ui
+	${MAKE} CXXFLAGS+="${CXXFLAGS} -I${.CURDIR}/src" -C ${.TARGET:H}
 
 clean:
-	${MAKE} -C examples/pixelgrab clean
-	${MAKE} -C examples/dtmf clean
+.for d in ${EXAMPLES:H}
+	${MAKE} -C ${d} clean
 	${MAKE} -C src clean
+.endfor
 
 .PHONY: ui pixelgrab dtmf
