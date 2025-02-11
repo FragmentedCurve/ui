@@ -1,7 +1,12 @@
 *~
 *#
 *.o
+*.a
+*.so
+*.so.*
 .ccls-cache/
-gmon.out
+*.pico
+*.depend
 pixelgrab
-test
+dtmf
+
