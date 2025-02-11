@@ -99,98 +99,23 @@ struct UIWidget {
 	UIWidget(UIHandle id, UIRect r) : id(id), r(r) { }
 	UIWidget(UIHandle id, UIPoint pos, int xw, int yw) : id(id), r(pos, xw, yw) { }
 
-	virtual UIWidget* Hit(UIPoint p) {
-		if (!r.Hit(p) || !visible) {
-			return NULL;
-		}
-
-		// this is the new parent so p must be relative to this.r
-		p = UIPoint(p.x - r.p.x, p.y - r.p.y);
-
-		for (UIWidget* walk = childtail; walk; walk = walk->prev) {
-			UIWidget* hit = walk->Hit(p);
-			if (hit) {
-				return hit;
-			}
-		}
-
-		return this;
-	}
-
-	virtual UIWidget* Hit(int x, int y) {
-		return Hit(UIPoint(x, y));
-	}
+	virtual UIWidget* Hit(UIPoint p);
+	virtual UIWidget* Hit(int x, int y);
 
 	virtual void HandlePress(UIPoint) {}
 	virtual void HandleClick(UIPoint) {}
-
 	virtual void Draw(UIScreen *scr) {}
 
-	virtual void Move(int x, int y) {
-		r = UIRect(x, y, r.xw, r.yw);
-	}
+	virtual void Move(int x, int y);
+	virtual void Move(UIPoint p);
+	virtual void Push(int x, int y);
+	virtual void Push(UIPoint p);
+	virtual void Resize(int dx, int dy);
+	UIRect Abs();
 
-	virtual void Move(UIPoint p) {
-		Move(p.x, p.y);
-	}
-
-	virtual void Push(int x, int y) {
-		r = r.From(x, y);
-	}
-	
-	virtual void Push(UIPoint p) {
-		Push(p.x, p.y);
-	}
-
-	virtual void Resize(int dx, int dy) {
-		r = r.Resize(dx, dy);
-	}
-
-	UIRect Abs() {
-		UIRect result = r;
-		for (UIWidget* walk = parent; walk; walk = walk->parent) {
-			result = result.From(walk->r.p);
-		}
-		return result;
-	}
-
-	UIWidget* Parent(UIWidget* parent) {
-		if (!parent) {
-			return this;
-		}
-
-		if (parent->childhead) {
-			next = parent->childhead;
-			next->prev = this;
-			parent->childhead = this;
-			this->parent = parent;
-		} else {
-			next = NULL;
-			prev = NULL;
-			parent->childhead = this;
-			parent->childtail = this;
-			this->parent = parent;
-		}
-
-		return this;
-	}
-
-	UIWidget* Children(UIWidget* w, ...) {
-		if (!w) {
-			return this;
-		}
-		w->Parent(this);
-
-		va_list ap;
-		va_start(ap, w);
-		for (UIWidget* child = va_arg(ap, UIWidget*); child; child = va_arg(ap, UIWidget*)) {
-			child->Parent(this);
-		}
-		va_end(ap);
-
-		return this;
-	}
-#define Children(...) Children(__VA_ARGS__, NULL) // TODO: Is there a better C++ way to do this?
+	UIWidget* Parent(UIWidget* parent);
+	UIWidget* __Children(UIWidget* w, ...);
+#define Children(...) __Children(__VA_ARGS__, NULL) // TODO: Is there a better C++ way to do this?
 
 
 	// Children (subtree)

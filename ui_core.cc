@@ -1,5 +1,96 @@
 #include "ui.h"
 
+UIWidget* UIWidget::Hit(UIPoint p) {
+	if (!r.Hit(p) || !visible) {
+		return NULL;
+	}
+
+	// this is the new parent so p must be relative to this.r
+	p = UIPoint(p.x - r.p.x, p.y - r.p.y);
+
+	for (UIWidget* walk = childtail; walk; walk = walk->prev) {
+		UIWidget* hit = walk->Hit(p);
+		if (hit) {
+			return hit;
+		}
+	}
+
+	return this;
+}
+
+UIWidget* UIWidget::Hit(int x, int y) {
+	return Hit(UIPoint(x, y));
+}
+
+
+void UIWidget::Move(int x, int y) {
+	r = UIRect(x, y, r.xw, r.yw);
+}
+
+void UIWidget::Move(UIPoint p) {
+	Move(p.x, p.y);
+}
+
+void UIWidget::Push(int x, int y) {
+	r = r.From(x, y);
+}
+	
+void UIWidget::Push(UIPoint p) {
+	Push(p.x, p.y);
+}
+
+void UIWidget::Resize(int dx, int dy) {
+	r = r.Resize(dx, dy);
+}
+
+UIRect UIWidget::Abs() {
+	UIRect result = r;
+	for (UIWidget* walk = parent; walk; walk = walk->parent) {
+		result = result.From(walk->r.p);
+	}
+	return result;
+}
+
+UIWidget* UIWidget::Parent(UIWidget* parent) {
+	if (!parent) {
+		return this;
+	}
+
+	if (parent->childhead) {
+		next = parent->childhead;
+		next->prev = this;
+		parent->childhead = this;
+		this->parent = parent;
+	} else {
+		next = NULL;
+		prev = NULL;
+		parent->childhead = this;
+		parent->childtail = this;
+		this->parent = parent;
+	}
+
+	return this;
+}
+
+
+#undef Children
+UIWidget* UIWidget::__Children(UIWidget* w, ...) {
+	if (!w) {
+		return this;
+	}
+	w->Parent(this);
+
+	va_list ap;
+	va_start(ap, w);
+	for (UIWidget* child = va_arg(ap, UIWidget*); child; child = va_arg(ap, UIWidget*)) {
+		child->Parent(this);
+	}
+	va_end(ap);
+
+	return this;
+}
+
+
 UIScreen::UIScreen(int xw, int yw): UIScreen(new uint32_t[xw * yw], xw, yw, xw) {}
 UIScreen::UIScreen(uint32_t* pixels, int xw, int yw) : xw(xw), yw(yw), pitch(xw), pixels(pixels)  {}
 UIScreen::UIScreen(uint32_t* pixels, int xw, int yw, int pitch) : xw(xw), yw(yw), pitch(pitch), pixels(pixels)  {}
