@@ -95,9 +95,9 @@ struct UIScreen {
 typedef int UIHandle;
   
 struct UIWidget {
-	UIWidget(UIHandle id) : id(id) { }
-	UIWidget(UIHandle id, UIRect r) : id(id), r(r) { }
-	UIWidget(UIHandle id, UIPoint pos, int xw, int yw) : id(id), r(pos, xw, yw) { }
+	UIWidget(UIHandle id) : id(id) {}
+	UIWidget(UIHandle id, UIRect r) : id(id), r(r) {}
+	UIWidget(UIHandle id, UIPoint pos, int xw, int yw) : id(id), r(pos, xw, yw) {}
 
 	virtual UIWidget* Hit(UIPoint p);
 	virtual UIWidget* Hit(int x, int y);
@@ -166,7 +166,7 @@ void       UINativeUpdate();
 void       UINativeToClipboard(const char* s);
 void       UINativeConsole(const char* s);
 
-// Extra native functions for pixelgrab
+// TODO: Extra native functions for pixelgrab. Possibly remove later.
 void       UINativeGrabMouse();
 void       UINativeReleaseMouse();
 UIPixel    UINativeGetPixel(int x, int y);
