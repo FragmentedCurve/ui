@@ -10,26 +10,24 @@
 #include <sys/shm.h>
 #include <X11/extensions/XShm.h>
 
-#include "ui_common.h"
+#include "ui_core.h"
 
 static Display* display;
 static Window main_window;
 static XImage* image;
 static const char* clipboard_text;
 
-//static auto mouse_grabbed = false;
-
-void Console(const char *s) {
+void UINativeConsole(const char *s) {
 	printf("%s", s);
 	fflush(stdout);
 }
 
-void ToClipboard(const char* s) {
+void UINativeToClipboard(const char* s) {
 	clipboard_text = s;
 	XSetSelectionOwner(display, XA_PRIMARY, main_window, CurrentTime);
 }
 
-void GrabMouse() {
+void UINativeGrabMouse() {
 	XGrabPointer(
 		display, DefaultRootWindow(display), True,
 		PointerMotionMask | ButtonPressMask,
@@ -37,15 +35,15 @@ void GrabMouse() {
 		None, None, CurrentTime);
 }
 
-void ReleaseMouse() {
+void UINativeReleaseMouse() {
 	XUngrabPointer(display, CurrentTime);
 }
 
-Pixel GetPixel(int x, int y) {
+UIPixel UINativeGetPixel(int x, int y) {
 	// TODO: This is too slow. If we zoom rectangle is larger,
 	// this function causes a lot of lag.
 	XWindowAttributes attr;
-	Pixel c;
+	UIPixel c;
 
 	XImage i = {
 		.width      = 1,
@@ -54,7 +52,7 @@ Pixel GetPixel(int x, int y) {
 		.data       = (char*) &c,
 		.bitmap_pad = 32,
 		.depth      = 24,        
-		.bytes_per_line = sizeof(Pixel),
+		.bytes_per_line = sizeof(UIPixel),
 		.bits_per_pixel = 32,
 	};
 
@@ -63,7 +61,7 @@ Pixel GetPixel(int x, int y) {
 	
 	// Return black if out of bounds
 	if (x < 0 || y < 0 || x >= attr.width || y >= attr.height)
-		return Pixel(0);
+		return UIPixel(0);
 		
 	(void) XGetSubImage(
 			    display,
@@ -77,7 +75,7 @@ Pixel GetPixel(int x, int y) {
 	return c;
 }
 
-void UpdateWindow() {
+void UINativeUpdate() {
 	XShmPutImage(display, main_window,
 		DefaultGC(display, DefaultScreen(display)),
 		image, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
@@ -119,10 +117,10 @@ static void FillSelectionRequest(XEvent event) {
 	XSendEvent(display, e.requestor, false, 0,(XEvent *)&e);
 }
 
-UIState UIGetState() {
+UIRawInput UINativeState() {
 	XEvent event;
 	int x, y;
-	static UIState s;
+	static UIRawInput s;
 
 	Window root_return;
 	Window child_return;
@@ -137,11 +135,11 @@ UIState UIGetState() {
 	s.screen_height = attr.height;
 
 	if (XQueryPointer(display, main_window, &root_return, &child_return, &root_x, &root_y, &x, &y, &mask)) {
-		s.dpointer = Point(x - s.pointer.x, y - s.pointer.y);
+		s.dpointer = UIPoint(x - s.pointer.x, y - s.pointer.y);
 		s.pointer.x = x;
 		s.pointer.y = y;
 	} else {
-		s.dpointer = Point(0, 0);
+		s.dpointer = UIPoint(0, 0);
 	}
 
 	XNextEvent(display, &event);
@@ -162,7 +160,13 @@ UIState UIGetState() {
 		else if (event.xbutton.button == 3)
 			s.m[1] = false;
 	} break;
-	case KeyPress:
+	case KeyPress: {
+		printf("KEYCODE PRESS: %d\n", event.xkey.keycode);
+		s.keys[event.xkey.keycode] = true;
+	} break;
+	case KeyRelease:
+		printf("KEYCODE RELEASE: %d\n", event.xkey.keycode);
+		s.keys[event.xkey.keycode] = false;
 		break;
 	case SelectionRequest:
 		FillSelectionRequest(event);
@@ -183,8 +187,14 @@ int main(int argc, char** argv) {
 	}
 
 	{ // Create windows
-		main_window = XCreateSimpleWindow(display, RootWindow(display, 0), 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 5, BlackPixel(display, 0), WhitePixel(display, 0));
-
+		main_window = XCreateSimpleWindow(
+			display,
+			RootWindow(display, 0),
+			0, 0,
+			SCREEN_WIDTH, SCREEN_HEIGHT,
+			0 /* border */,
+			BlackPixel(display, 0),
+			WhitePixel(display, 0));
 		XStoreName(display, main_window, WINDOW_TITLE);
 		XResizeWindow(display, main_window, SCREEN_WIDTH, SCREEN_HEIGHT);
 	}
@@ -259,8 +269,8 @@ int main(int argc, char** argv) {
 	XDestroyWindow(display, main_window);
 	XCloseDisplay(display);
 
-	if (shmdt(shmseg.shmaddr) == -1) {
-		perror("shmdt");
+	if (shmctl(shmseg.shmid, IPC_RMID, NULL) == -1) {
+		perror("shmctl");
 	}
 
 	return status;

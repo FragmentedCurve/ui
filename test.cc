@@ -1,8 +1,8 @@
 #include "ui.h"
 
 const char* WINDOW_TITLE = "test";
-const int SCREEN_WIDTH = 1000;
-const int SCREEN_HEIGHT = 1000;
+const int SCREEN_WIDTH = 2000;
+const int SCREEN_HEIGHT = 2000;
 
 Pixel* screen;
 
@@ -11,7 +11,7 @@ Pixel* screen;
 enum { TOGGLE, BUTTON };
 
 int UIMain(int argc, char** argv) {
-	UIState state;
+	UIRawInput state;
 
 	// GUI Tree
 	UIWidget* root = new UISurface(-1, Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
@@ -20,13 +20,12 @@ int UIMain(int argc, char** argv) {
 
 	root->Children(t, b);
 
-	Screen* scr = new Screen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
+	Screen* scr = new Screen(screen, 1000, 1000, SCREEN_WIDTH);
 
-	while (state = UIGetState(), !state.halt) {
-		UIOutput out = UIDelegate(state, root);
+	while (state = UINativeState(), !state.halt) {
+		UIReaction out = UIImpacted(state, root);
 
 		if (out.clicked) {
-			Console("HERE I AM \n");
 			switch (out.clicked->id) {
 			case TOGGLE: {
 				b->visible = !b->visible;
@@ -42,9 +41,8 @@ int UIMain(int argc, char** argv) {
 			}
 		}
 
-		//printf("%d %d\n", state.dpointer.x, state.dpointer.y);
 		UIDraw(scr, root);
-		UpdateWindow();
+		UINativeUpdate();
 	}
 
 	return 0;

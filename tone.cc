@@ -3,7 +3,7 @@
 const char* WINDOW_TITLE = "DTMF";
 const int SCREEN_WIDTH   = 480;
 const int SCREEN_HEIGHT  = 4 * (SCREEN_WIDTH / 3);
-Pixel* screen;
+UIPixel* screen;
 
 #include <cstdio>
 
@@ -11,16 +11,16 @@ Pixel* screen;
 #define POUND    11
 
 int UIMain(int argc, char** argv) {
-	UIState s;
+	UIRawInput s;
 	UIWidget* root;
-	Screen* scr = new Screen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
+	UIScreen* scr = new UIScreen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 	UIWidget* b;
 	{ // GUI Tree
 		auto button_w = SCREEN_WIDTH / 3;
-		auto button_r = Rect(0, 0, button_w, button_w);
+		auto button_r = UIRect(0, 0, button_w, button_w);
 
-		(root = new UISurface(-1, Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)))
+		(root = new UISurface(-1, UIRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)))
 			->Children(
 				// Row 1
 				new UIButton(1, button_r.p, button_r.xw, button_r.yw),
@@ -44,8 +44,8 @@ int UIMain(int argc, char** argv) {
 
 	}
 
-	while (s = UIGetState(), !s.halt) {
-		UIOutput out = UIDelegate(s, root);
+	while (s = UINativeState(), !s.halt) {
+		UIReaction out = UIImpacted(s, root);
 
 		if (out.clicked && out.clicked->id > -1) {
 			//out.clicked->visible = false;
@@ -68,7 +68,7 @@ int UIMain(int argc, char** argv) {
 */
 
 		UIDraw(scr, root);
-		UpdateWindow();
+		UINativeUpdate();
 	}
 
 	return 0;

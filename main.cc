@@ -13,9 +13,9 @@ const char* WINDOW_TITLE = "PixelGrab";
 const int SCREEN_WIDTH   = PIXEL_ZOOM * SCAN_WIDTH;
 const int SCREEN_HEIGHT  = PIXEL_ZOOM * SCAN_HEIGHT + 50;
 
-Point pointer;
+UIPoint pointer;
 bool mouse_buttons[2];
-Pixel* screen;
+UIPixel* screen;
 
 static bool scan_mode = false;
 
@@ -115,12 +115,12 @@ static void fast_scan(Screen* scr, Event e) {
 */
 
 struct Logo : UIWidget {
-	Logo(UIHandle id, Rect r) : UIWidget(id, r) {}
+	Logo(UIHandle id, UIRect r) : UIWidget(id, r) {}
 	
-	void Draw(Screen* scr) {
+	void Draw(UIScreen* scr) {
 		auto pad = 1;
 		auto width = 10; //r.xw / 2 - pad;
-		auto box = Rect(0, 0, width, width);
+		auto box = UIRect(0, 0, width, width);
 		
 		scr->DrawFill(UI_RED, box.From(width + pad, width + pad).From(r.p));
 		scr->DrawFill(UI_GREEN, box.From(0, width + pad).From(r.p));
@@ -142,33 +142,33 @@ enum Handles {
 };
 
 int UIMain(int argc, char **argv) {
-	UIState state;
+	UIRawInput state;
 	UIWidget* root;
 
-	auto scr = Screen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
+	auto scr = UIScreen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 	// GUI Tree
-	root = new UIWidget(ID_ROOT, Point(0, 0), SCREEN_WIDTH, SCREEN_HEIGHT);
+	root = new UIWidget(ID_ROOT, UIPoint(0, 0), SCREEN_WIDTH, SCREEN_HEIGHT);
 	root->Children(
-		new HexFloat(ID_ANON, Point(0, 0)),
-		new UIPixelSelector(ID_GRID, Point(0, 0), root->r.xw, GRID_HEIGHT, PIXEL_ZOOM),
-		(new UIPanel(ID_ANON, Rect(0, GRID_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - GRID_HEIGHT)))
+		new HexFloat(ID_ANON, UIPoint(0, 0)),
+		new UIPixelSelector(ID_GRID, UIPoint(0, 0), root->r.xw, GRID_HEIGHT, PIXEL_ZOOM),
+		(new UIPanel(ID_ANON, UIRect(0, GRID_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - GRID_HEIGHT)))
 		->Children(
-			new UIToggle(ID_BTOGGLE, Point(5, 5), 100, 40),
-			new UIButton(ID_BEXIT, Point(110, 5), 100, 40),
-			new Logo(ID_ANON, Rect(SCREEN_WIDTH - (SCREEN_HEIGHT - GRID_HEIGHT) / 2,
+			new UIToggle(ID_BTOGGLE, UIPoint(5, 5), 100, 40),
+			new UIButton(ID_BEXIT, UIPoint(110, 5), 100, 40),
+			new Logo(ID_ANON, UIRect(SCREEN_WIDTH - (SCREEN_HEIGHT - GRID_HEIGHT) / 2,
 						(SCREEN_HEIGHT - GRID_HEIGHT) / 2,
 						(SCREEN_HEIGHT - GRID_HEIGHT) / 2,
 						(SCREEN_HEIGHT - GRID_HEIGHT) / 2))));
 
-	while (state = UIGetState(), !state.halt) {
-		UIOutput out = UIDelegate(state, root);
+	while (state = UINativeState(), !state.halt) {
+		UIReaction out = UIImpacted(state, root);
 
 		if (out.clicked) {
 			switch (out.clicked->id) {
 			case ID_BTOGGLE: {
 				// TODO: Capture mouse
-				Console(((UIToggle*) out.clicked)->light.on ? "On\n" : "Off\n");
+				UINativeConsole(((UIToggle*) out.clicked)->light.on ? "On\n" : "Off\n");
 			} break;
 			case ID_BEXIT: {
 				goto halt;
@@ -177,7 +177,7 @@ int UIMain(int argc, char **argv) {
 		}
 
 		UIDraw(&scr, root);
-		UpdateWindow();
+		UINativeUpdate();
 	}
 
 halt:

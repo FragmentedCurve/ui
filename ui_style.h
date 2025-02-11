@@ -1,6 +1,11 @@
 #ifndef _UI_STYLE_H_
 #define _UI_STYLE_H_
 
+#define __RGB(r, g, b) ((UIPixel)(((r) & 0xff) << 16 | ((g) & 0xff) << 8 | ((b) & 0xff)))
+#define __BGR(r, g, b) ((UIPixel)(((b) & 0xff) << 16 | ((g) & 0xff) << 8 | ((r) & 0xff)))
+
+#define UI_RGB(r, g, b) __RGB(r, g, b)
+
 enum UIColors {
 	UI_DARKEST        = UI_RGB(   0,    0,    0),
 	UI_LIGHTEST       = UI_RGB(0xff, 0xff, 0xff),

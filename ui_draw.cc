@@ -1,14 +1,14 @@
 #include "ui.h"
 
-Screen::Screen(int xw, int yw): Screen(new uint32_t[xw * yw], xw, yw, xw) {}
-Screen::Screen(uint32_t* pixels, int xw, int yw) : xw(xw), yw(yw), pitch(xw), pixels(pixels)  {}
-Screen::Screen(uint32_t* pixels, int xw, int yw, int pitch) : xw(xw), yw(yw), pitch(pitch), pixels(pixels)  {}
+UIScreen::UIScreen(int xw, int yw): UIScreen(new uint32_t[xw * yw], xw, yw, xw) {}
+UIScreen::UIScreen(uint32_t* pixels, int xw, int yw) : xw(xw), yw(yw), pitch(xw), pixels(pixels)  {}
+UIScreen::UIScreen(uint32_t* pixels, int xw, int yw, int pitch) : xw(xw), yw(yw), pitch(pitch), pixels(pixels)  {}
 
-void Screen::DrawHLine(Pixel c, Point p, int width) {
-	DrawHLine(c, p, width, Rect(0, 0, xw, yw));
+void UIScreen::DrawHLine(UIPixel c, UIPoint p, int width) {
+	DrawHLine(c, p, width, UIRect(0, 0, xw, yw));
 }
 
-void Screen::DrawHLine(Pixel c, Point p, int width, Rect clip) {
+void UIScreen::DrawHLine(UIPixel c, UIPoint p, int width, UIRect clip) {
 	// Completely outside the clip area
 	if (p.x >= clip.p.x + clip.xw || p.y < clip.p.y || p.y >= clip.p.y + yw)
 		return;
@@ -27,11 +27,11 @@ void Screen::DrawHLine(Pixel c, Point p, int width, Rect clip) {
 		pixels[UI_INDEX(pitch, p.x + width, p.y)] = c;
 }
 
-void Screen::DrawVLine(Pixel c, Point p, int height) {
-	DrawVLine(c, p, height, Rect(0, 0, xw, yw));
+void UIScreen::DrawVLine(UIPixel c, UIPoint p, int height) {
+	DrawVLine(c, p, height, UIRect(0, 0, xw, yw));
 }
 
-void Screen::DrawVLine(Pixel c, Point p, int height, Rect clip) {
+void UIScreen::DrawVLine(UIPixel c, UIPoint p, int height, UIRect clip) {
 	// Completely outside the clip area
 	if (p.y >= clip.p.y + clip.yw || p.x < clip.p.x || p.x >= clip.p.x + clip.xw)
 		return;
@@ -50,16 +50,16 @@ void Screen::DrawVLine(Pixel c, Point p, int height, Rect clip) {
 		pixels[UI_INDEX(pitch, p.x, p.y + height)] = c;
 }
 
-void Screen::DrawFill(Pixel c, Rect r) {
+void UIScreen::DrawFill(UIPixel c, UIRect r) {
 	for (int i = 0; i < r.yw; i++)
 		DrawHLine(c, r.p.From(0, i), r.xw);
 }
 
-void Screen::DrawRect(Pixel c, Rect r) {
-	DrawRect(c, r, Rect(0, 0, xw, yw));
+void UIScreen::DrawRect(UIPixel c, UIRect r) {
+	DrawRect(c, r, UIRect(0, 0, xw, yw));
 }
 
-void Screen::DrawRect(Pixel c, Rect r, Rect clip) {
+void UIScreen::DrawRect(UIPixel c, UIRect r, UIRect clip) {
 	// Top
 	DrawHLine(c, r.p, r.xw, clip);
 	// Bottom
@@ -70,8 +70,8 @@ void Screen::DrawRect(Pixel c, Rect r, Rect clip) {
 	DrawVLine(c, r.p.From(r.xw - 1, 0), r.yw, clip);
 }
 
-Screen* Screen::Subset(Rect r) {
-	return new Screen(pixels + UI_INDEX(pitch, r.p.x, r.p.y), r.xw, r.yw, pitch);
+UIScreen* UIScreen::Subset(UIRect r) {
+	return new UIScreen(pixels + UI_INDEX(pitch, r.p.x, r.p.y), r.xw, r.yw, pitch);
 }
 
 /* TODO: Implement Resize

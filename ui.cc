@@ -9,23 +9,16 @@
   - Bitmap drawing and manipulation.
 
   - Builtin fonts.
-
-  - Implement machine states.  
-
-  - Reimplement all handlers based on machine states.
-
-  - Divide headers into ui_core.h, ui_widgets.h, ui_platform.h, ui_style.h and maybe ui_assets.h.
  */
-#include <iostream>
 
-UIOutput UIDelegate(UIState state, UIWidget* root) {
-	UIOutput out = {
+UIReaction UIImpacted(UIRawInput state, UIWidget* root) {
+	UIReaction out = {
 		.pressed = NULL,
 		.clicked = NULL,
 	};
 
-	static UIState pstate; // Previous state
-	static UIOutput pout;  // Previous output
+	static UIRawInput pstate; // Previous state
+	static UIReaction pout;   // Previous output
 
 	// TODO: General for more than left click Handle primary
 	// pointer clicks
@@ -67,7 +60,7 @@ UIOutput UIDelegate(UIState state, UIWidget* root) {
 	return out;
 }
 
-void UIDraw(Screen* scr, UIWidget* root) {
+void UIDraw(UIScreen* scr, UIWidget* root) {
 	if (!root || !root->visible)
 		return;
 
@@ -79,7 +72,7 @@ void UIDraw(Screen* scr, UIWidget* root) {
 	}
 }
 
-void UILight::Draw(Screen* scr) {
+void UILight::Draw(UIScreen* scr) {
 	scr->DrawFill(on ? UI_LIGHT_ON : UI_LIGHT_OFF, r.From(2, 2).Resize(-2, -2));
 
 	if (!on) {
@@ -105,12 +98,12 @@ void UILight::Draw(Screen* scr) {
 	scr->DrawVLine(UI_SURFACE_HILITE, r.p.From(r.xw - 2, 2), r.yw - 2); // Inner
 }
 
-void UIToggle::Draw(Screen* scr) {
+void UIToggle::Draw(UIScreen* scr) {
 	UIButton::Draw(scr);
 	light.Draw(scr->Subset(r));
 }
 
-void HexFloat::Set(Pixel c) {
+void HexFloat::Set(UIPixel c) {
 	const char* hexmap = "0123456789abcdef";
 	char* buf = color_s;
 	
@@ -131,18 +124,18 @@ void HexFloat::Set(Pixel c) {
 }
 
 // TODO: Clean this up. It was quickly hacked out just to make it work.
-void HexFloat::DrawFont(Screen* scr, bool* gylph, int len, int x0, int y0, Pixel c) {
+void HexFloat::DrawFont(UIScreen* scr, bool* gylph, int len, int x0, int y0, UIPixel c) {
 	auto zoom = 2;
 	for (int i = 0; i < len; i++) {
 		auto x = x0 + zoom * (i % 3);
 		auto y = y0 + zoom * (i / 3);
 
 		if (gylph[i])
-		  scr->DrawFill(c /*UI_TEXT_FG*/, Rect(Point(x, y), Point(x + zoom, y + zoom)));
+			scr->DrawFill(c /*UI_TEXT_FG*/, UIRect(UIPoint(x, y), UIPoint(x + zoom, y + zoom)));
 	}
 }
 
-void HexFloat::Draw(Screen* scr) {
+void HexFloat::Draw(UIScreen* scr) {
 	// TODO: Clean this up. It was quickly hacked out just to make it work.
 	scr->DrawFill(UI_TEXT_BG, r);
 	scr->DrawRect(UI_TEXT_BORDER, r);
@@ -152,7 +145,7 @@ void HexFloat::Draw(Screen* scr) {
 		if (color_s[i] >= 'a')
 			c = color_s[i] - 'a' + 0xa;
 
-		Pixel color;
+		UIPixel color;
 		if (i == 1 || i == 2)
 			color = UI_RGB(0xc0, 0, 0); // 0xc00000;
 		else if (i == 3 || i == 4)
@@ -164,14 +157,14 @@ void HexFloat::Draw(Screen* scr) {
 	}
 }
 
-void UIButton::Draw(Screen* scr) {
+void UIButton::Draw(UIScreen* scr) {
 	if (pressed)
 		Draw(scr, UI_SURFACE_SHADOW, UI_SURFACE_HILITE, UI_SURFACE_FG);
 	else
 		Draw(scr, UI_SURFACE_HILITE, UI_SURFACE_SHADOW, UI_SURFACE_BG);
 }
 
-void UIButton::Draw(Screen* scr, Pixel hilite, Pixel shadow, Pixel bg) {
+void UIButton::Draw(UIScreen* scr, UIPixel hilite, UIPixel shadow, UIPixel bg) {
 	scr->DrawFill(bg, r);
 
 	// Top hilite
@@ -194,11 +187,11 @@ void UIButton::Draw(Screen* scr, Pixel hilite, Pixel shadow, Pixel bg) {
 	scr->DrawRect(UI_DARKEST, r);
 }
 
-UIPixelGrid::UIPixelGrid(UIHandle id, Point position, int xw, int yw, int zoom) : UIWidget(id, position, xw, yw) {
+UIPixelGrid::UIPixelGrid(UIHandle id, UIPoint position, int xw, int yw, int zoom) : UIWidget(id, position, xw, yw) {
 	cols = xw / zoom;
 	rows = yw / zoom;
 	this->zoom = zoom;
-	pixels = new Pixel[cols * rows];
+	pixels = new UIPixel[cols * rows];
 	for (int i = 0; i < cols * rows; i++)
 		pixels[i] = UI_LIGHTEST;
 }
@@ -207,18 +200,18 @@ UIPixelGrid::~UIPixelGrid() {
 	delete[] pixels;
 }
 
-Point UIPixelGrid::CellPosition(int x, int y) {
+UIPoint UIPixelGrid::CellPosition(int x, int y) {
 	auto p0 = r.p.From(x * zoom, y * zoom);	
 	return p0;
 }
 
-void UIPixelGrid::Draw(Screen* scr) {
+void UIPixelGrid::Draw(UIScreen* scr) {
 	for (int i = 0; i < cols; i++)
 		for (int j = 0; j < rows; j++)
 			DrawCell(scr, i, j);
 }
 
-void UIPixelGrid::DrawCell(Screen* scr, int x, int y) {
+void UIPixelGrid::DrawCell(UIScreen* scr, int x, int y) {
 	if (x < 0) x = 0;
 	if (y < 0) y = 0;
 	if (x >= cols) x = cols - 1;
@@ -228,7 +221,7 @@ void UIPixelGrid::DrawCell(Screen* scr, int x, int y) {
 	auto p1 = p0.From(zoom, zoom);
 
 	// Fill square
-	scr->DrawFill(pixels[UI_INDEX(cols, x, y)], Rect(p0, p1));
+	scr->DrawFill(pixels[UI_INDEX(cols, x, y)], UIRect(p0, p1));
 
 	// Draw border
 	scr->DrawHLine(UI_DARKEST, p0, zoom);
@@ -240,7 +233,7 @@ void UIPixelGrid::DrawCell(Screen* scr, int x, int y) {
 		scr->DrawHLine(UI_DARKEST, p0.From(0, zoom - 1), zoom);
 }
 
-void UIPixelSelector::DrawSelection(Screen* scr) {
+void UIPixelSelector::DrawSelection(UIScreen* scr) {
 	// Weird inverted color
 	auto c = (UI_WHITE ^ pixels[UI_INDEX(cols, select.x, select.y)]) | UI_RED;
 
@@ -263,11 +256,11 @@ void UIPixelSelector::DrawSelection(Screen* scr) {
 	if (select.y == 0)
 		q0.y++;
 
-	scr->DrawRect(c, Rect(p0, p1));
-	scr->DrawRect(c, Rect(q0, q1));
+	scr->DrawRect(c, UIRect(p0, p1));
+	scr->DrawRect(c, UIRect(q0, q1));
 }
 
-void UIPixelSelector::EraseSelection(Screen* scr) {
+void UIPixelSelector::EraseSelection(UIScreen* scr) {
 	DrawCell(scr, prev_select.x, prev_select.y);
 	DrawCell(scr, prev_select.x - 1, prev_select.y - 1);
 	DrawCell(scr, prev_select.x, prev_select.y - 1);
@@ -279,7 +272,7 @@ void UIPixelSelector::EraseSelection(Screen* scr) {
 	DrawCell(scr, prev_select.x - 1, prev_select.y);
 }
 
-void UIPixelSelector::HandleClick(Point p) {
+void UIPixelSelector::HandleClick(UIPoint p) {
 /*
 	auto p = pointer.From(r.p);
 	p.x /= zoom;
@@ -296,7 +289,7 @@ void UIPixelSelector::HandleClick(Point p) {
 */
 }
 
-void UIPixelSelector::Draw(Screen* scr) {
+void UIPixelSelector::Draw(UIScreen* scr) {
 	EraseSelection(scr);
 	DrawSelection(scr);
 
