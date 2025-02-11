@@ -64,6 +64,7 @@ struct UIRect {
 	UIRect From(int x, int y) {
 		return UIRect(p.From(x, y), xw, yw);
 	}
+
 	UIRect From(UIPoint q) {
 		return From(q.x, q.y);
 	}
@@ -89,50 +90,181 @@ struct UIRect {
 // class. The abstract class should just define the minimum methods a
 // backend renderer requires.
 struct UIScreen {
-	UIScreen(int xw, int yw); // TODO: Abstract renderer
-	UIScreen(uint32_t *pixels, int xw, int yw);
-	UIScreen(uint32_t *pixels, int xw, int yw, int pitch);
+	UIScreen(int xw, int yw)
+		: UIScreen(new uint32_t[xw * yw], xw, yw, xw) {}  // TODO: Abstract renderer
+	UIScreen(uint32_t* pixels, int xw, int yw)
+		: xw(xw), yw(yw), pitch(xw), pixels(pixels)  {}
+	UIScreen(uint32_t* pixels, int xw, int yw, int pitch)
+		: xw(xw), yw(yw), pitch(pitch), pixels(pixels)  {}
 
-	UIScreen* Subset(UIRect r);// TODO: Abstract renderer
-	void Resize(int xw, int yw);
+	UIScreen* Subset(UIRect r) {// TODO: Abstract renderer
+		return new UIScreen(pixels + UI_INDEX(pitch, r.p.x, r.p.y), r.xw, r.yw, pitch);
+	}
 
-	void DrawHLine(UIPixel c, UIPoint p, int width);// TODO: Abstract renderer
-	void DrawHLine(UIPixel c, UIPoint p, int width, UIRect clip);// TODO: Abstract renderer
-	void DrawVLine(UIPixel c, UIPoint p, int height);// TODO: Abstract renderer
-	void DrawVLine(UIPixel c, UIPoint p, int height, UIRect clip);// TODO: Abstract renderer
-	void DrawFill(UIPixel c, UIRect r);// TODO: Abstract renderer
-	void DrawRect(UIPixel c, UIRect r);// TODO: Abstract renderer
-	void DrawRect(UIPixel c, UIRect r, UIRect clip);// TODO: Abstract renderer
+	void Resize(int xw, int yw) {
+		/*
+		if (xw < this->xw && yw< this->yw) {
+			return;
+		}
+
+		if (xw * yw <= (this->xw + pitch) * this->yw) {
+			this->xw = xw;
+			this->xy = yw;
+			this->pitch =
+				// (pitch + xw)
+				}
+
+		if (xw < this->xw && yw < this->yw) {
+			return;
+		}
+		*/
+	}
+
+	void DrawHLine(UIPixel c, UIPoint p, int width) { // TODO: Abstract renderer
+		DrawHLine(c, p, width, UIRect(0, 0, xw, yw));
+	}
+
+	void DrawHLine(UIPixel c, UIPoint p, int width, UIRect clip) { // TODO: Abstract renderer
+		// Completely outside the clip area
+		if (p.x >= clip.p.x + clip.xw || p.y < clip.p.y || p.y >= clip.p.y + yw)
+			return;
+
+		// Clip left
+		if (p.x < clip.p.x) {
+			width -= clip.p.x - p.x;
+			p.x = clip.p.x;
+		}
+
+		// Clip right
+		if (p.x + width > clip.p.x + clip.xw)
+			width = clip.p.x + clip.xw - p.x;
+
+		while (--width >= 0)
+			pixels[UI_INDEX(pitch, p.x + width, p.y)] = c;
+	}
+
+	void DrawVLine(UIPixel c, UIPoint p, int height) {// TODO: Abstract renderer
+		DrawVLine(c, p, height, UIRect(0, 0, xw, yw));
+	}
+
+	void DrawVLine(UIPixel c, UIPoint p, int height, UIRect clip) {// TODO: Abstract renderer
+		// Completely outside the clip area
+		if (p.y >= clip.p.y + clip.yw || p.x < clip.p.x || p.x >= clip.p.x + clip.xw)
+			return;
+
+		// Clip top
+		if (p.y < clip.p.y) {
+			height -= clip.p.y - p.y;
+			p.y = clip.p.y;
+		}
+
+		// Clip bottom
+		if (p.y + height > clip.p.y + clip.yw)
+			height = clip.p.y + clip.yw - p.y;
+
+		while (--height >= 0)
+			pixels[UI_INDEX(pitch, p.x, p.y + height)] = c;
+	}
+
+	void DrawFill(UIPixel c, UIRect r) { // TODO: Abstract renderer
+		for (int i = 0; i < r.yw; i++)
+			DrawHLine(c, r.p.From(0, i), r.xw);
+	}
+
+	void DrawRect(UIPixel c, UIRect r) { // TODO: Abstract renderer
+		DrawRect(c, r, UIRect(0, 0, xw, yw));
+	}
+
+	void DrawRect(UIPixel c, UIRect r, UIRect clip) { // TODO: Abstract renderer
+		// Top
+		DrawHLine(c, r.p, r.xw, clip);
+		// Bottom
+		DrawHLine(c, r.p.From(0, r.yw - 1), r.xw, clip);
+		// Left
+		DrawVLine(c, r.p, r.yw, clip);
+		// Right
+		DrawVLine(c, r.p.From(r.xw - 1, 0), r.yw, clip);
+	}
 
 	int xw, yw, pitch;
 	uint32_t *pixels;
 };
 
 typedef int UIHandle;
-  
+
 struct UIWidget {
 	UIWidget(UIHandle id) : id(id) {}
 	UIWidget(UIHandle id, UIRect r) : id(id), r(r) {}
 	UIWidget(UIHandle id, UIPoint pos, int xw, int yw) : id(id), r(pos, xw, yw) {}
 
-	virtual UIWidget* Hit(UIPoint p);
-	virtual UIWidget* Hit(int x, int y);
+	virtual UIWidget* Hit(UIPoint p) {
+		if (!r.Hit(p) || !visible) {
+			return NULL;
+		}
+
+		// this is the new parent so p must be relative to this.r
+		p = UIPoint(p.x - r.p.x, p.y - r.p.y);
+
+		for (UIWidget* walk = childtail; walk; walk = walk->prev) {
+			UIWidget* hit = walk->Hit(p);
+			if (hit) {
+				return hit;
+			}
+		}
+
+		return this;
+	}
+	virtual UIWidget* Hit(int x, int y) { return Hit(UIPoint(x, y)); }
 
 	virtual void HandlePress(UIPoint) {}
 	virtual void HandleClick(UIPoint) {}
-	virtual void Draw(UIScreen *scr) {}
+	virtual void Draw(UIScreen *scr)  {}
 
-	virtual void Move(int x, int y);
-	virtual void Move(UIPoint p);
-	virtual void Push(int x, int y);
-	virtual void Push(UIPoint p);
-	virtual void Resize(int dx, int dy);
-	UIRect Abs();
+	virtual void Move(int x, int y)     { r = UIRect(x, y, r.xw, r.yw); }
+	virtual void Move(UIPoint p)        { Move(p.x, p.y); }
+	virtual void Push(int x, int y)     { r = r.From(x, y); }
+	virtual void Push(UIPoint p)        { Push(p.x, p.y); }
+	virtual void Resize(int dx, int dy) { r = r.Resize(dx, dy); }
 
-	UIWidget* Parent(UIWidget* parent);
-	UIWidget* __Children(UIWidget* w, ...);
-#define Children(...) __Children(__VA_ARGS__, NULL) // TODO: Is there a better C++ way to do this?
+	UIRect Abs() {
+		UIRect result = r;
+		for (UIWidget* walk = parent; walk; walk = walk->parent) {
+			result = result.From(walk->r.p);
+		}
+		return result;
+	}
 
+	UIWidget* Parent(UIWidget* parent) {
+		if (!parent) {
+			return this;
+		}
+
+		if (parent->childhead) {
+			next = parent->childhead;
+			next->prev = this;
+			parent->childhead = this;
+			this->parent = parent;
+		} else {
+			next = NULL;
+			prev = NULL;
+			parent->childhead = this;
+			parent->childtail = this;
+			this->parent = parent;
+		}
+
+		return this;
+	}
+
+	UIWidget* Children(UIWidget* w) {
+		w->Parent(this);
+		return this;
+	}
+
+	template <typename... Rest>
+	UIWidget* Children(UIWidget* w, Rest...rest) {
+		w->Parent(this);
+		return Children(rest...);
+	}
 
 	// Children (subtree)
 	UIWidget* childhead = NULL; // Youngest child

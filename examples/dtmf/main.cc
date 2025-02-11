@@ -41,7 +41,6 @@ int UIMain(int argc, char** argv) {
 				new UIButton(ASTERISK, button_r.p.From(0, button_w * 3), button_r.xw, button_r.yw),
 				new UIButton(0, button_r.p.From(button_w, button_w * 3), button_r.xw, button_r.yw),
 				new UIButton(POUND, button_r.p.From(button_w, button_w * 3).From(button_w, 0), button_r.xw, button_r.yw));
-
 	}
 
 	while (s = UINativeState(), !s.halt) {

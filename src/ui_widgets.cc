@@ -122,14 +122,14 @@ void UIToggle::Draw(UIScreen* scr) {
 void HexFloat::Set(UIPixel c) {
 	const char* hexmap = "0123456789abcdef";
 	char* buf = color_s;
-	
+
 	// Remove bytes that aren't RGB
 	c &= 0x00ffffff;
 
 	// Initialize string to "#000000"
 	((int*)buf)[0] = *((int*)"#000");
 	((int*)buf)[1] = *((int*)"000");
-	
+
 	buf = buf + 6;
 
 	while (c) {
@@ -217,7 +217,7 @@ UIPixelGrid::~UIPixelGrid() {
 }
 
 UIPoint UIPixelGrid::CellPosition(int x, int y) {
-	auto p0 = r.p.From(x * zoom, y * zoom);	
+	auto p0 = r.p.From(x * zoom, y * zoom);
 	return p0;
 }
 
