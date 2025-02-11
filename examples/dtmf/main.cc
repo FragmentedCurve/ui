@@ -1,4 +1,4 @@
-#include "ui.h"
+#include <ui.h>
 
 const char* WINDOW_TITLE = "DTMF";
 const int SCREEN_WIDTH   = 480;
