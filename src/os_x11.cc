@@ -33,6 +33,8 @@ static Window main_window;
 static XImage* image;
 static const char* clipboard_text;
 
+static UIRawInput raw_input;
+
 void UINativeConsole(const char *s) {
 	printf("%s", s);
 	fflush(stdout);
@@ -67,18 +69,18 @@ UIPixel UINativeGetPixel(int x, int y) {
 		.format     = ZPixmap,
 		.data       = (char*) &c,
 		.bitmap_pad = 32,
-		.depth      = 24,        
+		.depth      = 24,
 		.bytes_per_line = sizeof(UIPixel),
 		.bits_per_pixel = 32,
 	};
 
 	XInitImage(&i);
 	XGetWindowAttributes(display, DefaultRootWindow(display), &attr);
-	
+
 	// Return black if out of bounds
 	if (x < 0 || y < 0 || x >= attr.width || y >= attr.height)
 		return UIPixel(0);
-		
+
 	(void) XGetSubImage(
 			    display,
 			    DefaultRootWindow(display),
@@ -94,11 +96,12 @@ UIPixel UINativeGetPixel(int x, int y) {
 void UINativeUpdate() {
 	XShmPutImage(display, main_window,
 		DefaultGC(display, DefaultScreen(display)),
-		image, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
+		image, 0, 0, 0, 0,
+		raw_input.screen_width, raw_input.screen_height, 0);
 }
 
-int PendingEvents() { 
-	return XPending(display); 
+int PendingEvents() {
+	return XPending(display);
 }
 
 static void FillSelectionRequest(XEvent event) {
@@ -135,62 +138,67 @@ static void FillSelectionRequest(XEvent event) {
 
 UIRawInput UINativeState() {
 	XEvent event;
-	int x, y;
-	static UIRawInput s;
 
-	Window root_return;
-	Window child_return;
-	int root_x, root_y;
-	unsigned int mask;
+	{ // Grab window dimensions
+		XWindowAttributes attr;
+		(void) XGetWindowAttributes(display, main_window, &attr);
+		raw_input.screen_width = attr.width;
+		raw_input.screen_height = attr.height;
+	}
 
-	XWindowAttributes attr;
+	{ // Grab cursor position
+		int x, y;
+		unsigned int mask;
+		int root_x, root_y;
+		Window root_return;
+		Window child_return;
 
-	(void) XGetWindowAttributes(display, main_window, &attr);
-
-	s.screen_width = attr.width;
-	s.screen_height = attr.height;
-
-	if (XQueryPointer(display, main_window, &root_return, &child_return, &root_x, &root_y, &x, &y, &mask)) {
-		s.dpointer = UIPoint(x - s.pointer.x, y - s.pointer.y);
-		s.pointer.x = x;
-		s.pointer.y = y;
-	} else {
-		s.dpointer = UIPoint(0, 0);
+		if (XQueryPointer(display, main_window, &root_return, &child_return, &root_x, &root_y, &x, &y, &mask)) {
+			raw_input.dpointer = UIPoint(x - raw_input.pointer.x, y - raw_input.pointer.y);
+			raw_input.pointer.x = x;
+			raw_input.pointer.y = y;
+		} else {
+			raw_input.dpointer = UIPoint(0, 0);
+		}
 	}
 
 	XNextEvent(display, &event);
 	switch (event.type) {
 	case ClientMessage: {
 		// Assume the window was closed.
-		s.halt = true;
+		raw_input.halt = true;
 	} break;
 	case ButtonPress: {
 		if (event.xbutton.button == 1)
-			s.m[0] = true;
+			raw_input.m[0] = true;
 		else if (event.xbutton.button == 3)
-			s.m[1] = true;
+			raw_input.m[1] = true;
 	} break;
 	case ButtonRelease: {
 		if (event.xbutton.button == 1)
-			s.m[0] = false;
+			raw_input.m[0] = false;
 		else if (event.xbutton.button == 3)
-			s.m[1] = false;
+			raw_input.m[1] = false;
 	} break;
 	case KeyPress: {
 		printf("KEYCODE PRESS: %d\n", event.xkey.keycode);
-		s.keys[event.xkey.keycode] = true;
+		raw_input.keys[event.xkey.keycode] = true;
 	} break;
 	case KeyRelease:
 		printf("KEYCODE RELEASE: %d\n", event.xkey.keycode);
-		s.keys[event.xkey.keycode] = false;
+		raw_input.keys[event.xkey.keycode] = false;
 		break;
 	case SelectionRequest:
 		FillSelectionRequest(event);
 		break;
 	}
 
-	return s;
+	return raw_input;
 }
+
+// TODO: Automate detection and setting of max dimensions.
+int SCREEN_WIDTH_MAX  = 4500;
+int SCREEN_HEIGHT_MAX = 3000;
 
 int main(int argc, char** argv) {
 	int status;
@@ -211,7 +219,7 @@ int main(int argc, char** argv) {
 			0 /* border */,
 			BlackPixel(display, 0),
 			WhitePixel(display, 0));
-		XStoreName(display, main_window, WINDOW_TITLE);
+		XStoreName(display, main_window, SCREEN_TITLE);
 		XResizeWindow(display, main_window, SCREEN_WIDTH, SCREEN_HEIGHT);
 	}
 
@@ -223,21 +231,20 @@ int main(int argc, char** argv) {
 	/*
 	{ // Set window size attributes
 	XSizeHints sizeHints;
-		
+
 		sizeHints.flags |= PMinSize | PMaxSize;
 		sizeHints.min_width = sizeHints.max_width = SCREEN_WIDTH;
 		sizeHints.min_height = sizeHints.max_height = SCREEN_HEIGHT;
 
 		XSetWMNormalHints(display, main_window, &sizeHints);
 	}
-	*/	
-	
+	*/
+
 	{ // Initialize event listening
 		Atom del_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
 		XSetWMProtocols(display, main_window, &del_window, 1);
 		XSelectInput(display, main_window,
-			ResizeRedirectMask
-			| PointerMotionMask
+			PointerMotionMask
 			| ExposureMask
 			| ButtonPressMask
 			| ButtonReleaseMask
@@ -251,10 +258,11 @@ int main(int argc, char** argv) {
 			image = XShmCreateImage(
 				display, DefaultVisual(display, DefaultScreen(display)),
 				DefaultDepth(display, DefaultScreen(display)), ZPixmap,
-				NULL, &shmseg, SCREEN_WIDTH, SCREEN_HEIGHT);
+				NULL, &shmseg, SCREEN_WIDTH_MAX, SCREEN_HEIGHT_MAX);
+
 			shmseg.shmid = shmget(
 				IPC_PRIVATE,
-				SCREEN_WIDTH * SCREEN_HEIGHT * DefaultDepth(display, DefaultScreen(display)),
+				SCREEN_WIDTH_MAX * SCREEN_HEIGHT_MAX * DefaultDepth(display, DefaultScreen(display)),
 				IPC_CREAT | 0777);
 
 			if (shmseg.shmid <= -1) {

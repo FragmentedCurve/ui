@@ -18,7 +18,6 @@
 #define _UI_H_
 
 #include <cstdint>
-#include <cstdarg>
 
 #include "ui_core.h"
 #include "ui_style.h"

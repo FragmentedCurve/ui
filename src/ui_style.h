@@ -14,8 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _UI_STYLE_H_
-#define _UI_STYLE_H_
+#pragma once
 
 #define __RGB(r, g, b) ((UIPixel)(((r) & 0xff) << 16 | ((g) & 0xff) << 8 | ((b) & 0xff)))
 #define __BGR(r, g, b) ((UIPixel)(((b) & 0xff) << 16 | ((g) & 0xff) << 8 | ((r) & 0xff)))
@@ -45,5 +44,3 @@ enum UIColors {
 #define UI_BLUE  UI_RGB(  0,   0, 255)
 
 extern bool gylphs[][15];
-
-#endif // _UI_STYLE_H_

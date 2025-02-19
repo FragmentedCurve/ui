@@ -14,8 +14,69 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _UI_WIDGETS_H_
-#define _UI_WIDGETS_H_
+#pragma once
+
+struct UIFillBox : UIWidget {
+	UIFillBox(UIHandle id, UIRect r) : UIWidget(id, r) {
+		resize = true;
+	}
+
+	virtual UIWidget* SetSize(int xw, int yw) {
+		UIWidget::SetSize(xw, yw);
+		if (childhead) {
+			childhead->SetSize(xw, yw);
+		}
+		return this;
+	}
+};
+
+struct UIHBox : UIWidget {
+	UIHBox(UIHandle id, UIRect r) : UIWidget(id, r) {}
+
+	virtual UIWidget* SetSize(int xw, int yw) {
+		UIWidget::SetSize(xw, yw);
+		int count = 0;
+
+		for (UIWidget* w = childhead; w; w = w->next) {
+			count++;
+		}
+
+		auto child_width = r.xw / count;
+		auto child_r = UIRect(0, 0, child_width, r.yw);
+
+		for (UIWidget* w = childhead; w; w = w->next) {
+			w->r = child_r;
+			w->SetSize(child_r.xw, child_r.yw);
+			child_r = child_r.From(child_width, 0);
+		}
+
+		return this;
+	}
+};
+
+struct UIVBox : UIWidget {
+	UIVBox(UIHandle id, UIRect r) : UIWidget(id, r) {}
+
+	virtual UIWidget* SetSize(int xw, int yw) {
+		UIWidget::SetSize(xw, yw);
+		int count = 0;
+
+		for (UIWidget* w = childhead; w; w = w->next) {
+			count++;
+		}
+
+		auto child_height = r.yw / count;
+		auto child_r = UIRect(0, 0, r.xw, child_height);
+
+		for (UIWidget* w = childhead; w; w = w->next) {
+			w->r = child_r;
+			w->SetSize(child_r.xw, child_r.yw);
+			child_r = child_r.From(0, child_height);
+		}
+
+		return this;
+	}
+};
 
 struct UISurface : UIWidget {
 	UISurface(UIHandle id, UIRect r) : UIWidget(id, r) {}
@@ -34,7 +95,6 @@ struct UIPanel : UIWidget {
 };
 
 struct UILight : UIWidget {
-	UILight(UIHandle id, UIPoint position) : UIWidget(id, position, 16, 16) {}
 	UILight(UIHandle id, UIRect r) : UIWidget(id, r) {}
 	virtual void Draw(UIScreen *scr);
 
@@ -48,7 +108,7 @@ struct UILight : UIWidget {
 };
 
 struct UIButton : UIWidget {
-	UIButton(UIHandle id, UIPoint position, int xw, int yw) : UIWidget(id, position, xw, yw) {}
+	UIButton(UIHandle id, UIRect r) : UIWidget(id, r) {}
 	void Draw(UIScreen* scr);
 
 	// Properties
@@ -59,8 +119,8 @@ private:
 };
 
 struct UIToggle : UIButton {
-	UIToggle(UIHandle id, UIPoint p, int xw, int yw)
-		: UIButton(id, p, xw, yw), light(id, UIRect(8, 8, 16, yw - 16)) {
+	UIToggle(UIHandle id, UIRect r)
+		: UIButton(id, r), light(id, UIRect(8, 8, 16, r.yw - 16)) {
 	}
 
 	virtual void Move(int x, int y) {
@@ -68,9 +128,14 @@ struct UIToggle : UIButton {
 		light.Move(x, y);
 	}
 
-	virtual void Resize(int xw, int yw) {
-		UIWidget::Resize(xw, yw);
-		light.Resize(0, yw);
+	virtual void Resize(int dx, int dy) {
+		UIWidget::Resize(dx, dy);
+		light.Resize(0, dy);
+	}
+
+	virtual UIWidget* SetSize(int xw, int yw) {
+		light.r.yw = yw - 16;
+		return UIWidget::SetSize(xw, yw);
 	}
 
 	virtual void HandleClick(UIPoint p) {
@@ -86,7 +151,7 @@ struct UIToggle : UIButton {
 };
 
 struct UIPixelGrid : UIWidget {
-	UIPixelGrid(UIHandle id, UIPoint position, int xw, int yw , int zoom);
+	UIPixelGrid(UIHandle id, UIRect r, int zoom);
 	virtual ~UIPixelGrid();
 	void Draw(UIScreen* scr);
 	UIPixel Get(int x, int y) { return pixels[UI_INDEX(cols, x, y)]; }
@@ -101,8 +166,8 @@ struct UIPixelGrid : UIWidget {
 };
 
 struct UIPixelSelector : UIPixelGrid {
-	UIPixelSelector(UIHandle id, UIPoint position, int xw, int yw, int zoom)
-		: UIPixelGrid(id, position, xw, yw, zoom) {
+	UIPixelSelector(UIHandle id, UIRect r, int zoom)
+		: UIPixelGrid(id, r, zoom) {
 		select = prev_select = UIPoint(cols / 2, rows / 2);
 	}
 	void Select(int x, int y);
@@ -120,8 +185,8 @@ private:
 };
 
 struct HexFloat : UIWidget {
-	HexFloat(UIHandle id) : UIWidget(id, UIPoint(0, 0), 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
-	HexFloat(UIHandle id, UIPoint p) : UIWidget(id, p, 48 + 25 + 2, 25 + 2) { Set(UI_LIGHTEST); }
+	HexFloat(UIHandle id) : UIWidget(id, UIRect(0, 0, 48 + 25 + 2, 25 + 2)) { Set(UI_LIGHTEST); }
+	HexFloat(UIHandle id, UIPoint p) : UIWidget(id, UIRect(p, 48 + 25 + 2, 25 + 2)) { Set(UI_LIGHTEST); }
 	void Draw(UIScreen* scr);
 	void Set(UIPixel c);
 
@@ -130,5 +195,3 @@ struct HexFloat : UIWidget {
 private:
 	void DrawFont(UIScreen* scr, bool *gylph, int len, int x0, int y0, UIPixel c);
 };
-
-#endif // _UI_WIDGETS_H_

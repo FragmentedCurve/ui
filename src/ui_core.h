@@ -14,15 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _UI_CORE_H_
-#define _UI_CORE_H_
-
-#include <cstdarg>
+#pragma once
 
 #define UI_INDEX(xw, x, y) ((xw) * (y) + (x))
 
 #ifndef NULL
-#define NULL 0
+#    define NULL 0
 #endif
 
 typedef uint32_t UIPixel;
@@ -43,6 +40,7 @@ struct UIRect {
 	UIPoint p;
 	int xw, yw;
 
+	UIRect() : UIRect(0, 0, 0, 0) {}
 	UIRect(int x, int y, int xw, int yw) : p(x, y), xw(xw), yw(yw) {}
 	UIRect(UIPoint origin, int xw, int yw) : p(origin), xw(xw), yw(yw) {}
 	UIRect(UIPoint p0, UIPoint p1) : p(p0), xw(p1.x - p0.x), yw(p1.y - p0.y) {}
@@ -90,14 +88,16 @@ struct UIRect {
 // class. The abstract class should just define the minimum methods a
 // backend renderer requires.
 struct UIScreen {
+	// TODO: Abstract renderer
 	UIScreen(int xw, int yw)
-		: UIScreen(new uint32_t[xw * yw], xw, yw, xw) {}  // TODO: Abstract renderer
+		: UIScreen(new uint32_t[xw * yw], xw, yw, xw) {}
 	UIScreen(uint32_t* pixels, int xw, int yw)
-		: xw(xw), yw(yw), pitch(xw), pixels(pixels)  {}
+		: xw(xw), yw(yw), pitch(xw), pixels(pixels) {}
 	UIScreen(uint32_t* pixels, int xw, int yw, int pitch)
-		: xw(xw), yw(yw), pitch(pitch), pixels(pixels)  {}
+		: xw(xw), yw(yw), pitch(pitch), pixels(pixels) {}
 
-	UIScreen* Subset(UIRect r) {// TODO: Abstract renderer
+	// TODO: Abstract renderer
+	UIScreen* Subset(UIRect r) {
 		return new UIScreen(pixels + UI_INDEX(pitch, r.p.x, r.p.y), r.xw, r.yw, pitch);
 	}
 
@@ -120,11 +120,13 @@ struct UIScreen {
 		*/
 	}
 
-	void DrawHLine(UIPixel c, UIPoint p, int width) { // TODO: Abstract renderer
+	// TODO: Abstract renderer
+	void DrawHLine(UIPixel c, UIPoint p, int width) {
 		DrawHLine(c, p, width, UIRect(0, 0, xw, yw));
 	}
 
-	void DrawHLine(UIPixel c, UIPoint p, int width, UIRect clip) { // TODO: Abstract renderer
+	// TODO: Abstract renderer
+	void DrawHLine(UIPixel c, UIPoint p, int width, UIRect clip) {
 		// Completely outside the clip area
 		if (p.x >= clip.p.x + clip.xw || p.y < clip.p.y || p.y >= clip.p.y + yw)
 			return;
@@ -143,11 +145,13 @@ struct UIScreen {
 			pixels[UI_INDEX(pitch, p.x + width, p.y)] = c;
 	}
 
-	void DrawVLine(UIPixel c, UIPoint p, int height) {// TODO: Abstract renderer
+	// TODO: Abstract renderer
+	void DrawVLine(UIPixel c, UIPoint p, int height) {
 		DrawVLine(c, p, height, UIRect(0, 0, xw, yw));
 	}
 
-	void DrawVLine(UIPixel c, UIPoint p, int height, UIRect clip) {// TODO: Abstract renderer
+	// TODO: Abstract renderer
+	void DrawVLine(UIPixel c, UIPoint p, int height, UIRect clip) {
 		// Completely outside the clip area
 		if (p.y >= clip.p.y + clip.yw || p.x < clip.p.x || p.x >= clip.p.x + clip.xw)
 			return;
@@ -166,16 +170,19 @@ struct UIScreen {
 			pixels[UI_INDEX(pitch, p.x, p.y + height)] = c;
 	}
 
-	void DrawFill(UIPixel c, UIRect r) { // TODO: Abstract renderer
+	// TODO: Abstract renderer
+	void DrawFill(UIPixel c, UIRect r) {
 		for (int i = 0; i < r.yw; i++)
 			DrawHLine(c, r.p.From(0, i), r.xw);
 	}
 
-	void DrawRect(UIPixel c, UIRect r) { // TODO: Abstract renderer
+	// TODO: Abstract renderer
+	void DrawRect(UIPixel c, UIRect r) {
 		DrawRect(c, r, UIRect(0, 0, xw, yw));
 	}
 
-	void DrawRect(UIPixel c, UIRect r, UIRect clip) { // TODO: Abstract renderer
+	// TODO: Abstract renderer
+	void DrawRect(UIPixel c, UIRect r, UIRect clip) {
 		// Top
 		DrawHLine(c, r.p, r.xw, clip);
 		// Bottom
@@ -195,7 +202,6 @@ typedef int UIHandle;
 struct UIWidget {
 	UIWidget(UIHandle id) : id(id) {}
 	UIWidget(UIHandle id, UIRect r) : id(id), r(r) {}
-	UIWidget(UIHandle id, UIPoint pos, int xw, int yw) : id(id), r(pos, xw, yw) {}
 
 	virtual UIWidget* Hit(UIPoint p) {
 		if (!r.Hit(p) || !visible) {
@@ -218,20 +224,50 @@ struct UIWidget {
 
 	virtual void HandlePress(UIPoint) {}
 	virtual void HandleClick(UIPoint) {}
-	virtual void Draw(UIScreen *scr)  {}
+	virtual void Draw(UIScreen *scr) {}
 
-	virtual void Move(int x, int y)     { r = UIRect(x, y, r.xw, r.yw); }
-	virtual void Move(UIPoint p)        { Move(p.x, p.y); }
-	virtual void Push(int x, int y)     { r = r.From(x, y); }
-	virtual void Push(UIPoint p)        { Push(p.x, p.y); }
-	virtual void Resize(int dx, int dy) { r = r.Resize(dx, dy); }
+	virtual void Move(int x, int y) { r = UIRect(x, y, r.xw, r.yw); }
+	virtual void Move(UIPoint p) { Move(p.x, p.y); }
+	virtual void Push(int x, int y) { r = r.From(x, y); }
+	virtual void Push(UIPoint p) { Push(p.x, p.y); }
+	virtual void Resize(int dx, int dy) { this->r = this->r.Resize(dx, dy); }
 
+	virtual UIWidget* SetSize(int xw, int yw) {
+		r = UIRect(r.p, xw, yw);
+		return this;
+	}
+/*
+  TODO: Do I want this?
+	virtal UIWidget* Set(UIProperty flag, boolean value) {
+		switch (flag) {
+		case UI_PROP_RESIZE:
+			resize = true;
+			break;
+		}
+		return this;
+	}
+*/
 	UIRect Abs() {
 		UIRect result = r;
 		for (UIWidget* walk = parent; walk; walk = walk->parent) {
 			result = result.From(walk->r.p);
 		}
 		return result;
+	}
+
+	UIWidget* Find(UIHandle id) {
+		if (this->id == id) {
+			return this;
+		}
+
+		for (UIWidget* w = childhead; w; w = w->next) {
+			if (auto result = w->Find(id); result) {
+				return result;
+			}
+		}
+
+		// 404 not found
+		return NULL;
 	}
 
 	UIWidget* Parent(UIWidget* parent) {
@@ -274,12 +310,15 @@ struct UIWidget {
 	UIWidget* parent    = NULL; // Our Parent
 
 	// Properties
-	UIHandle id       = -1;                 // Unique ID of widget instance
-	UIRect   r        = UIRect(0, 0, 0, 0); // The widget's real estate.
-	bool     visible  = true;               // Widget is active and visable.
-	bool     disabled = false;              // Widget is visible but not functional.
-	bool     pressed  = false;              // Pressed with left mouse button.
-	bool     drag     = false; // TODO: Should this exist?
+	UIHandle id              = -1;                 // Unique ID of widget instance
+	UIRect   r               = UIRect(0, 0, 0, 0); // The widget's real estate.
+	bool     visible         = true;               // Widget is active and visable.
+	bool     disabled        = false;              // Widget is visible but not functional.
+	bool     pressed         = false;              // Pressed with left mouse button.
+	bool     pressed_right   = false;              // Pressed with right mouse button.
+	bool     pressed_key     = false;              // Pressed with keyboard.
+	bool     drag            = false;              // Follow pointer. TODO: Should this exist?
+	bool     resize          = false;              // Respond to screen resize.
 };
 
 struct UIRawInput {
@@ -301,7 +340,7 @@ struct UIReaction  {
 extern       UIPixel* screen;
 extern const int      SCREEN_WIDTH;
 extern const int      SCREEN_HEIGHT;
-extern const char*    WINDOW_TITLE;
+extern const char*    SCREEN_TITLE;
 
 int        UIMain(int argc, char **argv);
 UIReaction UIImpacted(UIRawInput state, UIWidget* root);
@@ -309,14 +348,17 @@ void       UIDraw(UIScreen* scr, UIWidget* root);
 
 
 // Platform Dependent, implemented in os_*.cc
+extern int SCREEN_WIDTH_MAX;
+extern int SCREEN_HEIGHT_MAX;
+
 UIRawInput UINativeState();
 void       UINativeUpdate();
 void       UINativeToClipboard(const char* s);
 void       UINativeConsole(const char* s);
+
 
 // TODO: Extra native functions for pixelgrab. Possibly remove later.
 void       UINativeGrabMouse();
 void       UINativeReleaseMouse();
 UIPixel    UINativeGetPixel(int x, int y);
 
-#endif // _UI_CORE_H_

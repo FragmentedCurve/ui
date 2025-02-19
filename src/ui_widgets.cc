@@ -16,9 +16,6 @@
 
 #include "ui.h"
 
-//#include <cstdarg>
-//#include <cassert>
-
 /*
   TODO
 
@@ -26,67 +23,6 @@
 
   - Builtin fonts.
  */
-
-UIReaction UIImpacted(UIRawInput state, UIWidget* root) {
-	UIReaction out = {
-		.pressed = NULL,
-		.clicked = NULL,
-	};
-
-	static UIRawInput pstate; // Previous state
-	static UIReaction pout;   // Previous output
-
-	// TODO: General for more than left click Handle primary
-	// pointer clicks
-	if (state.m[0] && !pstate.m[0]) {
-		// Something was pressed.
-		out.pressed = root->Hit(state.pointer);
-		if (out.pressed) {
-			out.pressed->pressed = true;
-			out.pressed->HandlePress(state.pointer);
-		}
-	} else if (!state.m[0] && pstate.m[0]) {
-		// Something might've been clicked.
-		if (pout.pressed && (root->Hit(state.pointer) == pout.pressed)) {
-			out.clicked = pout.pressed;
-			out.clicked->HandleClick(state.pointer);
-		}
-
-		// Otherwise, no click, only a release
-		if (pout.pressed) {
-			pout.pressed->pressed = false;
-		}
-	} else {
-		// Previously pressed persists
-		out.pressed = pout.pressed;
-	}
-
-	// TODO: Should drags be a property and handled here?
-
-	if (state.screen_width != pstate.screen_width || state.screen_height != pstate.screen_height) {
-		// Screen was resized.
-		// TODO: Implement layout logic & classes
-		int dx = state.screen_width - pstate.screen_width;
-		int dy = state.screen_height - pstate.screen_height;
-		root->Resize(dx, dy);
-	}
-
-	pstate = state;
-	pout = out;
-	return out;
-}
-
-void UIDraw(UIScreen* scr, UIWidget* root) {
-	if (!root || !root->visible)
-		return;
-
-	root->Draw(scr);
-	scr = scr->Subset(root->r);
-
-	for (UIWidget* walk = root->childhead; walk; walk = walk->next) {
-		UIDraw(scr, walk);
-	}
-}
 
 void UILight::Draw(UIScreen* scr) {
 	scr->DrawFill(on ? UI_LIGHT_ON : UI_LIGHT_OFF, r.From(2, 2).Resize(-2, -2));
@@ -174,7 +110,7 @@ void HexFloat::Draw(UIScreen* scr) {
 }
 
 void UIButton::Draw(UIScreen* scr) {
-	if (pressed)
+	if (pressed || pressed_key)
 		Draw(scr, UI_SURFACE_SHADOW, UI_SURFACE_HILITE, UI_SURFACE_FG);
 	else
 		Draw(scr, UI_SURFACE_HILITE, UI_SURFACE_SHADOW, UI_SURFACE_BG);
@@ -203,9 +139,9 @@ void UIButton::Draw(UIScreen* scr, UIPixel hilite, UIPixel shadow, UIPixel bg) {
 	scr->DrawRect(UI_DARKEST, r);
 }
 
-UIPixelGrid::UIPixelGrid(UIHandle id, UIPoint position, int xw, int yw, int zoom) : UIWidget(id, position, xw, yw) {
-	cols = xw / zoom;
-	rows = yw / zoom;
+UIPixelGrid::UIPixelGrid(UIHandle id, UIRect r, int zoom) : UIWidget(id, r) {
+	cols = r.xw / zoom;
+	rows = r.yw / zoom;
 	this->zoom = zoom;
 	pixels = new UIPixel[cols * rows];
 	for (int i = 0; i < cols * rows; i++)
@@ -222,9 +158,11 @@ UIPoint UIPixelGrid::CellPosition(int x, int y) {
 }
 
 void UIPixelGrid::Draw(UIScreen* scr) {
-	for (int i = 0; i < cols; i++)
-		for (int j = 0; j < rows; j++)
+	for (int i = 0; i < cols; i++) {
+		for (int j = 0; j < rows; j++) {
 			DrawCell(scr, i, j);
+		}
+	}
 }
 
 void UIPixelGrid::DrawCell(UIScreen* scr, int x, int y) {
@@ -287,6 +225,14 @@ void UIPixelSelector::EraseSelection(UIScreen* scr) {
 	DrawCell(scr, prev_select.x - 1, prev_select.y + 1);
 	DrawCell(scr, prev_select.x - 1, prev_select.y);
 }
+
+/* TODO: Implement
+void UIPixelSelector::HandlePress(UIPoint p) {
+	if (!pressed)
+		return;
+	//printf("%d %d", p.x, p.y);
+}
+*/
 
 void UIPixelSelector::HandleClick(UIPoint p) {
 /*
