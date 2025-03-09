@@ -40,8 +40,9 @@ UIReaction UIImpacted(UIRawInput state, UIWidget* root) {
 
 	if (state.screen_width != pstate.screen_width || state.screen_height != pstate.screen_height) {
 		// Screen was resized.
-		if (root->resize) {
+		if (root->fill_screen) {
 			root->SetSize(state.screen_width, state.screen_height);
+			root->Move(0, 0);
 		}
 	}
 

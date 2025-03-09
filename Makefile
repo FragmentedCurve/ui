@@ -1,4 +1,4 @@
-EXAMPLES=	layout #dtmf pixelgrab grabbutton layout
+EXAMPLES=	dtmf #pixelgrab grabbutton layout
 CXXFLAGS=	-I/usr/local/include -I${.CURDIR}/src -Wall -fPIC -O2
 LDFLAGS=	-L../../src -L/usr/local/lib
 

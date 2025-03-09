@@ -292,6 +292,7 @@ struct UIWidget {
 	}
 
 	UIWidget* Children(UIWidget* w) {
+		// TODO: Reverse the order.
 		w->Parent(this);
 		return this;
 	}
@@ -318,7 +319,7 @@ struct UIWidget {
 	bool     pressed_right   = false;              // Pressed with right mouse button.
 	bool     pressed_key     = false;              // Pressed with keyboard.
 	bool     drag            = false;              // Follow pointer. TODO: Should this exist?
-	bool     resize          = false;              // Respond to screen resize.
+	bool     fill_screen     = false;              // Respond to screen resize.
 };
 
 struct UIRawInput {

@@ -181,11 +181,9 @@ UIRawInput UINativeState() {
 			raw_input.m[1] = false;
 	} break;
 	case KeyPress: {
-		printf("KEYCODE PRESS: %d\n", event.xkey.keycode);
 		raw_input.keys[event.xkey.keycode] = true;
 	} break;
 	case KeyRelease:
-		printf("KEYCODE RELEASE: %d\n", event.xkey.keycode);
 		raw_input.keys[event.xkey.keycode] = false;
 		break;
 	case SelectionRequest:

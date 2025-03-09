@@ -18,7 +18,7 @@
 
 struct UIFillBox : UIWidget {
 	UIFillBox(UIHandle id, UIRect r) : UIWidget(id, r) {
-		resize = true;
+		fill_screen = true;
 	}
 
 	virtual UIWidget* SetSize(int xw, int yw) {
@@ -31,6 +31,7 @@ struct UIFillBox : UIWidget {
 };
 
 struct UIHBox : UIWidget {
+	UIHBox(UIHandle id) : UIWidget(id) {}
 	UIHBox(UIHandle id, UIRect r) : UIWidget(id, r) {}
 
 	virtual UIWidget* SetSize(int xw, int yw) {
@@ -55,6 +56,7 @@ struct UIHBox : UIWidget {
 };
 
 struct UIVBox : UIWidget {
+	UIVBox(UIHandle id) : UIWidget(id) {}
 	UIVBox(UIHandle id, UIRect r) : UIWidget(id, r) {}
 
 	virtual UIWidget* SetSize(int xw, int yw) {
@@ -108,6 +110,7 @@ struct UILight : UIWidget {
 };
 
 struct UIButton : UIWidget {
+	UIButton(UIHandle id) : UIWidget(id) {}
 	UIButton(UIHandle id, UIRect r) : UIWidget(id, r) {}
 	void Draw(UIScreen* scr);
 

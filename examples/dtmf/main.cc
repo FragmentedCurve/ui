@@ -15,36 +15,35 @@ int UIMain(int argc, char** argv) {
 	UIWidget* root;
 	UIScreen* scr = new UIScreen(screen, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH_MAX);
 
-	{ // GUI Tree
-		auto button_w = SCREEN_WIDTH / 3;
-		auto button_r = UIRect(0, 0, button_w, button_w);
-
-		(root = new UIFillBox(-1, UIRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)))
+	// GUI Tree
+	(root = new UIVBox(-1))
+		->Children(
+			// Row 1
+			(new UIHBox(-1))
 			->Children(
-				// Row 1
-				(new UIHBox(-1, UIRect(0, 0, SCREEN_WIDTH, button_w)))
-				->Children(
-					new UIButton(1, button_r),
-					new UIButton(2, button_r),
-					new UIButton(3, button_r)),
+				new UIButton(1),
+				new UIButton(2),
+				new UIButton(3)),
+			// Row 2
+			(new UIHBox(-1))
+			->Children(
+				new UIButton(4),
+				new UIButton(5),
+				new UIButton(6)),
 
-				// Row 2
-				new UIButton(4, button_r.From(0,            button_w)),
-				new UIButton(5, button_r.From(button_w,     button_w)),
-				new UIButton(6, button_r.From(button_w * 2, button_w)),
-
-				// Row 3
-				new UIButton(7, button_r.From(0,            button_w * 2)),
-				new UIButton(8, button_r.From(button_w,     button_w * 2)),
-				new UIButton(9, button_r.From(button_w * 2, button_w * 2)),
-
-				// Row 4
-				new UIButton(ASTERISK, button_r.From(0,            button_w * 3)),
-				new UIButton(0,        button_r.From(button_w,     button_w * 3)),
-				new UIButton(POUND,    button_r.From(button_w * 2, button_w * 3)));
-	}
-
-	root->resize = true;
+			// Row 3
+			(new UIHBox(-1))
+			->Children(
+				new UIButton(7),
+				new UIButton(8),
+				new UIButton(9)),
+			// Row 4
+			(new UIHBox(-1))
+			->Children(
+				new UIButton(ASTERISK),
+				new UIButton(0),
+				new UIButton(POUND)));
+	root->fill_screen = true;
 
 	while (s = UINativeState(), !s.halt) {
 		UIReaction out = UIImpacted(s, root);
