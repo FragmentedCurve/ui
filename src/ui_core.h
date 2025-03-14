@@ -293,7 +293,6 @@ struct UIWidget {
 	}
 
 	UIWidget* Children(UIWidget* w) {
-		// TODO: Reverse the order.
 		w->Parent(this);
 		return this;
 	}

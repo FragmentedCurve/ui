@@ -45,7 +45,7 @@ struct UIHBox : UIWidget {
 		auto child_width = r.xw / count;
 		auto child_r = UIRect(0, 0, child_width, r.yw);
 
-		for (UIWidget* w = childhead; w; w = w->next) {
+		for (UIWidget* w = childtail; w; w = w->prev) {
 			w->r = child_r;
 			w->SetSize(child_r.xw, child_r.yw);
 			child_r = child_r.From(child_width, 0);
@@ -70,7 +70,7 @@ struct UIVBox : UIWidget {
 		auto child_height = r.yw / count;
 		auto child_r = UIRect(0, 0, r.xw, child_height);
 
-		for (UIWidget* w = childhead; w; w = w->next) {
+		for (UIWidget* w = childtail; w; w = w->prev) {
 			w->r = child_r;
 			w->SetSize(child_r.xw, child_r.yw);
 			child_r = child_r.From(0, child_height);
