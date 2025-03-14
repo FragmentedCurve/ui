@@ -1,6 +1,6 @@
 #include <ui.h>
 
-const char* WINDOW_TITLE = "grabbutton";
+const char* SCREEN_TITLE = "grabbutton";
 const int SCREEN_WIDTH = 1000;
 const int SCREEN_HEIGHT = 1000;
 
@@ -13,12 +13,12 @@ enum { TOGGLE, BUTTON };
 int UIMain(int argc, char** argv) {
 	// GUI Tree
 	UIWidget* root = new UISurface(-1, UIRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
-	UIButton* b = new UIButton(BUTTON, UIPoint(400, 400), 500, 100);
-	UIToggle* t = new UIToggle(TOGGLE, UIPoint(10, 10), 100, 50);
+	UIButton* b = new UIButton(BUTTON, UIRect(400, 400, 500, 100));
+	UIToggle* t = new UIToggle(TOGGLE, UIRect(10, 10, 100, 50));
 
 	root->Children(t, b);
 
-	UIScreen* scr = new UIScreen(screen, SCREEN_WIDTH, SCREEN_HEIGHT);
+	UIScreen* scr = new UIScreen(screen, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH_MAX);
 
 	for (UIRawInput state = UINativeState(); !state.halt; state = UINativeState()) {
 		UIReaction out = UIImpacted(state, root);

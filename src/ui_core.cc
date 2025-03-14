@@ -52,6 +52,8 @@ UIReaction UIImpacted(UIRawInput state, UIWidget* root) {
 }
 
 void UIDraw(UIScreen* scr, UIWidget* root) {
+	// TODO: Only draw what needs to be repainted. We waste too
+	// much time drawing everything.
 	if (!root || !root->visible)
 		return;
 

@@ -256,6 +256,7 @@ struct UIWidget {
 	}
 
 	UIWidget* Find(UIHandle id) {
+		// TODO: An ID should found in O(1) time, not by transversing the entire tree.
 		if (this->id == id) {
 			return this;
 		}

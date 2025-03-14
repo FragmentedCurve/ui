@@ -5,10 +5,12 @@ const int SCREEN_WIDTH   = 480;
 const int SCREEN_HEIGHT  = 4 * (SCREEN_WIDTH / 3);
 UIPixel* screen;
 
-#include <cstdio>
-
 #define ASTERISK 10
 #define POUND    11
+
+// TODO: Main thread writes to tones to set which tones should
+// play. Audio thread will read and play the tones that are turned on.
+volatile char tones[12] = {0};
 
 int UIMain(int argc, char** argv) {
 	UIRawInput s;
@@ -30,7 +32,6 @@ int UIMain(int argc, char** argv) {
 				new UIButton(4),
 				new UIButton(5),
 				new UIButton(6)),
-
 			// Row 3
 			(new UIHBox(-1))
 			->Children(
@@ -47,33 +48,28 @@ int UIMain(int argc, char** argv) {
 
 	while (s = UINativeState(), !s.halt) {
 		UIReaction out = UIImpacted(s, root);
+
 		for (auto i = 10; i < 20; i++) {
 			auto id = i < 19 ? i - 9 : 0;
 			auto w = (UIButton*) root->Find(id);
 			if (w) {
 				w->pressed_key = s.keys[i];
 				w->HandlePress(s.pointer);
+				tones[id] = w->pressed_key;
 			}
 		}
 
-/*
-		switch (out.clicked->id) {
-		case 0:
-		case 1:
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		case 6:
-		case 7:
-		case 8:
-		case 9:
-			break;
-		}
-*/
+		if (out.pressed)
+			tones[out.pressed->id] = true;
+		if (out.clicked)
+			tones[out.clicked->id] = false;
 
 		UIDraw(scr, root);
 		UINativeUpdate();
+
+		// for (auto i = 0; i < 12; i++)
+		// 	printf("%x ", tones[i]);
+		// printf("\n");
 	}
 
 	return 0;
