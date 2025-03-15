@@ -122,6 +122,10 @@ private:
 };
 
 struct UIToggle : UIButton {
+  	UIToggle(UIHandle id)
+		: UIButton(id), light(id, UIRect(8, 8, 16, r.yw - 16)) {
+	}
+
 	UIToggle(UIHandle id, UIRect r)
 		: UIButton(id, r), light(id, UIRect(8, 8, 16, r.yw - 16)) {
 	}

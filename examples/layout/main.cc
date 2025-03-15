@@ -10,6 +10,7 @@ const int   SCREEN_HEIGHT = SCREEN_WIDTH;
 UIPixel* screen;
 
 int UIMain(int argc, char** argv) {
+	int key;
 	UIWidget* root;
 
 	UIToggle *t1, *t2, *t3, *t4;
@@ -17,7 +18,7 @@ int UIMain(int argc, char** argv) {
 	auto* scr = new UIScreen(screen, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH_MAX);
 
 	srand(time(NULL));
-	int key = rand() & 0xf;
+	while (key = rand() & 0xf, !key); // Avoid zero
 
 #ifdef DEBUG
 	key = 1;
@@ -25,10 +26,10 @@ int UIMain(int argc, char** argv) {
 
 	(root = new UIHBox(-1, UIRect()))
 	  ->Children(
-		     (t1 = new UIToggle(1, UIRect())),
-		     (t2 = new UIToggle(2, UIRect())),
-		     (t3 = new UIToggle(3, UIRect())),
-		     (t4 = new UIToggle(4, UIRect())))->SetSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+		  (t1 = new UIToggle(1)),
+		  (t2 = new UIToggle(2)),
+		  (t3 = new UIToggle(3)),
+		  (t4 = new UIToggle(4))->SetSize(SCREEN_WIDTH, SCREEN_HEIGHT));
 
 	root->fill_screen = true;
 

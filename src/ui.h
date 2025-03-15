@@ -14,8 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _UI_H_
-#define _UI_H_
+#pragma once
 
 #include <cstdint>
 
@@ -23,4 +22,3 @@
 #include "ui_style.h"
 #include "ui_widgets.h"
 
-#endif // _UI_H_

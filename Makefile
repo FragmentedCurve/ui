@@ -1,5 +1,5 @@
 EXAMPLES=	dtmf grabbutton layout #pixelgrab
-CXXFLAGS=	-I/usr/local/include -I${.CURDIR}/src -Wall -fPIC -O2
+CXXFLAGS=	-I/usr/local/include -I${.CURDIR}/src
 LDFLAGS=	-L../../src -L/usr/local/lib
 
 EXAMPLES:=	${EXAMPLES:@.EX.@${.CURDIR}/examples/${.EX.}/${.EX.}@}

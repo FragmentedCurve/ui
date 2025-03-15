@@ -362,4 +362,3 @@ void       UINativeConsole(const char* s);
 void       UINativeGrabMouse();
 void       UINativeReleaseMouse();
 UIPixel    UINativeGetPixel(int x, int y);
-
