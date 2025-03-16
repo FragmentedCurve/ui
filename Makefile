@@ -1,5 +1,9 @@
-CXXFLAGS+=	-O2 -I ${.CURDIR}/src -I /usr/local/include  -msse2 -mavx2
+CXXFLAGS+=	-std=c++17 -Wall -pedantic -O2 -I ${.CURDIR}/src -I /usr/local/include
+CXXFLAGS_amd64+=-msse2 -mavx2
 LDFLAGS+=	-L ${.CURDIR}/src -L /usr/local/lib
+
+# TODO: Check arch for supported flags
+CXXFLAGS+= ${CXXFLAGS_amd64}
 
 .export CXXFLAGS
 .export LDFLAGS
