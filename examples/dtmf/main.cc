@@ -1,10 +1,7 @@
 #include <ui.h>
 
-#include <cstdio> // TODO: REMOVE ME
-
 #define MA_NO_DECODING
 #define MA_NO_ENCODING
-#define MA_DEBUG_OUTPUT
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
@@ -63,7 +60,7 @@ int UIMain(int argc, char** argv) {
 		config.playback.channels = CHANNELS;
 		config.sampleRate        = SAMPLERATE;
 		config.dataCallback      = play_audio;
-		config.pUserData         = NULL;
+		config.periods           = 1;
 
 		if (ma_device_init(NULL, &config, &device) != MA_SUCCESS) {
 			fprintf(stderr, "ma_device_init failed.\n");
@@ -113,16 +110,7 @@ int UIMain(int argc, char** argv) {
 	while (s = UINativeState(), !s.halt) {
 		UIReaction out = UIImpacted(s, root);
 
-		// TODO: Fix me
-		// for (auto i = 10; i < 20; i++) {
-		// 	auto id = i < 19 ? i - 9 : 0;
-		// 	auto w = (UIButton*) root->Find(id);
-		// 	if (w) {
-		// 		w->pressed_key = s.keys[i];
-		// 		w->HandlePress(s.pointer);
-		// 		tones[id] = w->pressed_key;
-		// 	}
-		// }
+		// TODO: Handle keyboard input
 
 		if (out.pressed) {
 			int digit = out.pressed->id;
@@ -132,10 +120,7 @@ int UIMain(int argc, char** argv) {
 			ma_waveform_set_frequency(&lo_wave, freq_lo[lo]);
 			ma_waveform_set_frequency(&hi_wave, freq_hi[hi]);
 			ma_device_start(&device);
-		}
-
-		if (out.clicked) {
-			// TODO: Break sound immediately.
+		} else {
 			ma_device_stop(&device);
 		}
 

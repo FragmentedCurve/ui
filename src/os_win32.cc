@@ -41,7 +41,7 @@ void UpdateWindow() {
 	HDC hdc = GetDC(hwnd);
 	HDC screen_dc = CreateCompatibleDC(hdc);
 	HBITMAP screen_bitmap = CreateBitmap(SCREEN_WIDTH, SCREEN_HEIGHT, 1, 32, screen);
-	
+
 	SelectObject(screen_dc, screen_bitmap);
 	BitBlt(hdc, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, screen_dc, 0, 0, SRCCOPY);
 	DeleteDC(screen_dc);
@@ -55,31 +55,31 @@ static bool grab_mode = false;
 Event GetGrabEvent() {
 	Event event = EVENT_NULL;
 	MSG msg = {};
-	
+
 	PeekMessage(&msg, NULL, WM_MOUSEFIRST, WM_MOUSELAST, PM_REMOVE);
 
 	switch (msg.message) {
 	case WM_LBUTTONDOWN: {
 		mouse_buttons[0] = true;
-		pointer.x = GET_X_LPARAM(msg.lParam); 
+		pointer.x = GET_X_LPARAM(msg.lParam);
 		pointer.y = GET_Y_LPARAM(msg.lParam);
 		event = EVENT_MOUSE_BUTTON;
 	} break;
 	case WM_LBUTTONUP: {
 		mouse_buttons[0] = false;
-		pointer.x = GET_X_LPARAM(msg.lParam); 
+		pointer.x = GET_X_LPARAM(msg.lParam);
 		pointer.y = GET_Y_LPARAM(msg.lParam);
 		event = EVENT_MOUSE_BUTTON;
 	} break;
 	case WM_RBUTTONDOWN: {
 		mouse_buttons[1] = true;
-		pointer.x = GET_X_LPARAM(msg.lParam); 
+		pointer.x = GET_X_LPARAM(msg.lParam);
 		pointer.y = GET_Y_LPARAM(msg.lParam);
 		event = EVENT_MOUSE_BUTTON;
 	} break;
 	case WM_RBUTTONUP: {
 		mouse_buttons[1] = false;
-		pointer.x = GET_X_LPARAM(msg.lParam); 
+		pointer.x = GET_X_LPARAM(msg.lParam);
 		pointer.y = GET_Y_LPARAM(msg.lParam);
 		event = EVENT_MOUSE_BUTTON;
 	} break;
@@ -103,39 +103,39 @@ Event GetEvent() {
 
 	if (grab_mode)
 		return GetGrabEvent();
-	
+
 	if (GetMessage(&msg, NULL, 0, 0) <= 0) {
 		return EVENT_QUIT;
 	}
 
 	switch (msg.message) {
 	case WM_MOUSEMOVE: {
-		pointer.x = GET_X_LPARAM(msg.lParam); 
+		pointer.x = GET_X_LPARAM(msg.lParam);
 		pointer.y = GET_Y_LPARAM(msg.lParam);
 		event = EVENT_MOUSE_MOVE;
 	} break;
 
 	case WM_LBUTTONDOWN: {
 		mouse_buttons[0] = true;
-		pointer.x = GET_X_LPARAM(msg.lParam); 
+		pointer.x = GET_X_LPARAM(msg.lParam);
 		pointer.y = GET_Y_LPARAM(msg.lParam);
 		event = EVENT_MOUSE_BUTTON;
 	} break;
 	case WM_LBUTTONUP: {
 		mouse_buttons[0] = false;
-		pointer.x = GET_X_LPARAM(msg.lParam); 
+		pointer.x = GET_X_LPARAM(msg.lParam);
 		pointer.y = GET_Y_LPARAM(msg.lParam);
 		event = EVENT_MOUSE_BUTTON;
 	} break;
 	case WM_RBUTTONDOWN: {
 		mouse_buttons[1] = true;
-		pointer.x = GET_X_LPARAM(msg.lParam); 
+		pointer.x = GET_X_LPARAM(msg.lParam);
 		pointer.y = GET_Y_LPARAM(msg.lParam);
 		event = EVENT_MOUSE_BUTTON;
 	} break;
 	case WM_RBUTTONUP: {
 		mouse_buttons[1] = false;
-		pointer.x = GET_X_LPARAM(msg.lParam); 
+		pointer.x = GET_X_LPARAM(msg.lParam);
 		pointer.y = GET_Y_LPARAM(msg.lParam);
 		event = EVENT_MOUSE_BUTTON;
 	} break;
@@ -160,7 +160,7 @@ int PendingEvents() {
 
 LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	MOUSEHOOKSTRUCT m = *((MOUSEHOOKSTRUCT*) lParam);
-	
+
 	pointer.x = m.pt.x;
 	pointer.y = m.pt.y;
 
@@ -194,14 +194,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		PostQuitMessage(0);
 	} break;
 	}
-	
+
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-int wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {	
+int wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
 	// Register the window class.
 	const wchar_t CLASS_NAME[]  = L"PixelGrab";
-    
+
 	WNDCLASS wc = { };
 
 	wc.lpfnWndProc   = WindowProc;
@@ -215,7 +215,7 @@ int wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int n
 		RECT rc = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
 
 		AdjustWindowRectEx(&rc, style, FALSE, 0);
-		
+
 		hwnd = CreateWindowEx(
 			0,            // Optional window styles.
 			CLASS_NAME,   // Window class
@@ -225,19 +225,19 @@ int wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int n
 			// Size and position
 			CW_USEDEFAULT, CW_USEDEFAULT, (rc.right - rc.left), (rc.bottom - rc.top),
 
-			NULL,       // Parent window    
+			NULL,       // Parent window
 			NULL,       // Menu
 			hInstance,  // Instance handle
 			NULL        // Additional application data
 			);
 	}
-	
+
 	if (hwnd == NULL)
 		return 0;
 
 	screen = new Pixel[SCREEN_WIDTH * SCREEN_HEIGHT];
 	ShowWindow(hwnd, nCmdShow);
-	
+
 	auto status = AppMain(0, NULL);
 
 	return status;

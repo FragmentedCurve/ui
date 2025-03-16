@@ -7,6 +7,6 @@
 .ccls-cache/
 *.pico
 *.depend
-pixelgrab
-dtmf
-
+*.debug
+*.full
+*.core
