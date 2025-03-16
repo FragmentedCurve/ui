@@ -107,6 +107,7 @@ int UIMain(int argc, char** argv) {
 				new UIButton(POUND)));
 	root->fill_screen = true;
 
+	int i = 0;
 	while (s = UINativeState(), !s.halt) {
 		UIReaction out = UIImpacted(s, root);
 
