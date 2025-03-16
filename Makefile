@@ -1,24 +1,9 @@
-EXAMPLES=	dtmf grabbutton layout #pixelgrab
-CXXFLAGS=	-I/usr/local/include -I${.CURDIR}/src
-LDFLAGS=	-L../../src -L/usr/local/lib
-
-EXAMPLES:=	${EXAMPLES:@.EX.@${.CURDIR}/examples/${.EX.}/${.EX.}@}
-
-.export CXXFLAGS
-.export LDFLAGS
-
-all: src/libui.a ${EXAMPLES}
-
-src/libui.a:
+all:
 	${MAKE} -C ${.CURDIR}/src
-
-${EXAMPLES}: src/libui.a
-	${MAKE} -C ${.TARGET:H}
+	${MAKE} -C ${.CURDIR}/examples
 
 clean:
-.for d in ${EXAMPLES:H}
-	${MAKE} -C ${d} clean
 	${MAKE} -C ${.CURDIR}/src clean
-.endfor
+	${MAKE} -C ${.CURDIR}/examples clean
 
 .PHONY: all clean
