@@ -333,8 +333,8 @@ struct UIRawInput {
 };
 
 struct UIReaction  {
-	UIWidget* pressed;
-	UIWidget* clicked;
+	UIWidget* pressed = NULL;
+	UIWidget* clicked = NULL;
 };
 
 // Provided to the platform by UIPixelGrab

@@ -3,13 +3,10 @@
 #include <cstdio>
 
 UIReaction UIImpacted(UIRawInput state, UIWidget* root) {
-	UIReaction out = {
-		.pressed = NULL,
-		.clicked = NULL,
-	};
-
 	static UIRawInput pstate; // Previous state
 	static UIReaction pout;   // Previous output
+
+	auto out = UIReaction();
 
 	// TODO: General for more than left click Handle primary
 	// pointer clicks
