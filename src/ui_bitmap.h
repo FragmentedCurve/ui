@@ -16,9 +16,17 @@
 
 #pragma once
 
-#include <cstdint>
+struct UIBitmap {
+	UIBitmap() {
+	}
 
-#include "ui_core.h"
-#include "ui_style.h"
-#include "ui_bitmap.h"
-#include "ui_widgets.h"
+	virtual void Draw(UIScreen* scr) {
+		// TODO: implement me
+	}
+
+	int xw           = 0;
+	int yw           = 0;
+	bool alpha_blend = false;
+	UIPixel mask     = UI_WHITE; // TODO: What's the best mask implementation?
+	UIPixel* data    = NULL;     // TODO: Should this me a unique pointer?
+};
