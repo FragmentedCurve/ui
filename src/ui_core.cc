@@ -1,7 +1,5 @@
 #include "ui.h"
 
-#include <cstdio>
-
 UIReaction UIImpacted(UIRawInput state, UIWidget* root) {
 	static UIRawInput pstate; // Previous state
 	static UIReaction pout;   // Previous output
