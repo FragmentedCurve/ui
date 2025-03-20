@@ -17,6 +17,10 @@
 #pragma once
 
 #include <cstdint>
+#include <cassert>
+
+// TODO: Turn on for debug builds only
+#define UIASSERT assert
 
 #include "ui_core.h"
 #include "ui_style.h"

@@ -1,4 +1,4 @@
-EXAMPLES=	dtmf grabbutton layout calc
+EXAMPLES=	imageviewer grabbutton layout calc dtmf
 LDADD=		-l:libui.a -lX11 -lXext
 
 .export LDADD

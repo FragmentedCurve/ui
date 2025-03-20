@@ -3,15 +3,22 @@ CXXFLAGS_amd64+=	-msse2 -mavx2
 CXXFLAGS+=	${CXXFLAGS_${MACHINE}}
 LDFLAGS+=	-L ${.CURDIR}/src -L /usr/local/lib
 
+FETCH=fetch
+
 .export CXXFLAGS
 .export LDFLAGS
+.export FETCH
 
-all:
+all: build-all
+
+build:
 	${MAKE} -C ${.CURDIR}/src
+
+build-all: build
 	${MAKE} -C ${.CURDIR}/examples
 
 clean:
 	${MAKE} -C ${.CURDIR}/src clean
 	${MAKE} -C ${.CURDIR}/examples clean
 
-.PHONY: all clean
+.PHONY: build build-all clean

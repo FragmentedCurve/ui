@@ -17,16 +17,45 @@
 #pragma once
 
 struct UIBitmap {
-	UIBitmap() {
+	void Draw(UIScreen* scr, UIPoint p) {
+		for (auto i = 0; i < xw; i++) {
+			for (auto j = 0; j < yw; j++) {
+				switch (channels) {
+				case 1: {
+				} break;
+				case 2: {
+				} break;
+				case 3: {
+					scr->pixels[UI_INDEX(scr->pitch, p.x + i, p.y + j)] = data[UI_INDEX(xw, i, j)];
+				} break;
+				case 4: {
+					// TODO: Alpha blending.
+					scr->pixels[UI_INDEX(scr->pitch, p.x + i, p.y + j)] = data[UI_INDEX(xw, i, j)];
+				} break;
+				default:
+					UIASSERT("Invalid channel quantity in UIBitmap");
+				}
+
+			}
+		}
 	}
 
-	virtual void Draw(UIScreen* scr) {
-		// TODO: implement me
-	}
+	int xw        = 0;
+	int yw        = 0;
+	int channels  = 3;
+	UIPixel mask  = UI_WHITE; // TODO: What's the best mask implementation?
+	UIPixel* data = NULL;     // TODO: Should this me a unique pointer?
+};
 
-	int xw           = 0;
-	int yw           = 0;
-	bool alpha_blend = false;
-	UIPixel mask     = UI_WHITE; // TODO: What's the best mask implementation?
-	UIPixel* data    = NULL;     // TODO: Should this me a unique pointer?
+
+struct UIFont {
+	UIFont(UIBitmap* font);
+
+	void Draw(UIScreen* scr, const char* s);
+	void Draw(UIScreen* scr, UIRect r, const char* s);
+
+	int size;
+	int space_word;
+	int space_letter;
+	int justify;
 };

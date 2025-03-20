@@ -7,6 +7,6 @@ CLEANFILES+= miniaudio.h
 main.cc: miniaudio.h
 
 miniaudio.h:
-	fetch https://raw.githubusercontent.com/mackron/miniaudio/master/miniaudio.h
+	${FETCH} https://raw.githubusercontent.com/mackron/miniaudio/master/miniaudio.h
 
 .include <bsd.prog.mk>

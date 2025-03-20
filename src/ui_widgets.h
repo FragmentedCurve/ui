@@ -115,10 +115,8 @@ struct UIButton : UIWidget {
 	void Draw(UIScreen* scr);
 
 	// Properties
-	char* caption;
-
-private:
-	void Draw(UIScreen* scr, UIPixel hilite, UIPixel shadow, UIPixel bg);
+	char* caption = NULL;
+	UIBitmap icon = {0}; // TODO: Different sizes?
 };
 
 struct UIToggle : UIButton {

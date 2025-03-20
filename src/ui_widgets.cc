@@ -110,13 +110,16 @@ void HexFloat::Draw(UIScreen* scr) {
 }
 
 void UIButton::Draw(UIScreen* scr) {
-	if (pressed || pressed_key)
-		Draw(scr, UI_SURFACE_SHADOW, UI_SURFACE_HILITE, UI_SURFACE_FG);
-	else
-		Draw(scr, UI_SURFACE_HILITE, UI_SURFACE_SHADOW, UI_SURFACE_BG);
-}
+	UIPixel hilite = UI_SURFACE_HILITE;
+	UIPixel shadow = UI_SURFACE_SHADOW;
+	UIPixel bg     = UI_SURFACE_BG;
 
-void UIButton::Draw(UIScreen* scr, UIPixel hilite, UIPixel shadow, UIPixel bg) {
+	if (pressed || pressed_key) {
+		hilite = UI_SURFACE_SHADOW;
+		shadow = UI_SURFACE_HILITE;
+		bg     = UI_SURFACE_FG;
+	}
+
 	scr->DrawFill(bg, r);
 
 	// Top hilite
@@ -137,6 +140,13 @@ void UIButton::Draw(UIScreen* scr, UIPixel hilite, UIPixel shadow, UIPixel bg) {
 
 	// Border
 	scr->DrawRect(UI_DARKEST, r);
+
+	if (icon.xw && icon.yw) {
+		// TODO: Draw center.
+		icon.Draw(scr, r.p.From(5, 5));
+	}
+
+	// TODO: Draw caption.
 }
 
 UIPixelGrid::UIPixelGrid(UIHandle id, UIRect r, int zoom) : UIWidget(id, r) {

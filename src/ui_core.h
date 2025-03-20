@@ -193,6 +193,9 @@ struct UIScreen {
 		DrawVLine(c, r.p.From(r.xw - 1, 0), r.yw, clip);
 	}
 
+	// TODO: Draw circle
+	// TODO: Fill circle
+
 	int xw, yw, pitch;
 	uint32_t *pixels;
 };
@@ -236,6 +239,7 @@ struct UIWidget {
 		r = UIRect(r.p, xw, yw);
 		return this;
 	}
+
 /*
   TODO: Do I want this?
 	virtal UIWidget* Set(UIProperty flag, boolean value) {
