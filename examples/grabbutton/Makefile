@@ -1,4 +1,4 @@
-PROG_CXX=	grabbutton
+PROG=	grabbutton
 SRCS=		main.cc
-MAN=
-.include <bsd.prog.mk>
+
+.include "../example.mk"

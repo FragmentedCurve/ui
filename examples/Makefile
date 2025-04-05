@@ -1,7 +1,4 @@
-EXAMPLES=	imageviewer grabbutton layout calc dtmf
-LDADD=		-l:libui.a -lX11 -lXext
-
-.export LDADD
+EXAMPLES=	imageviewer grabbutton layout dtmf
 
 all:
 .for dir in ${EXAMPLES}
@@ -13,4 +10,4 @@ clean:
 	${MAKE} -C ${dir} clean
 .endfor
 
-.PHONY: all clean
+.PHONY: clean

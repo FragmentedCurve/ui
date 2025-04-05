@@ -16,34 +16,26 @@
 
 #pragma once
 
+#include <cstdio>
+
 struct UIBitmap {
 	void Draw(UIScreen* scr, UIPoint p) {
+		// TODO: Come back to this and implement a fully
+		// featured UIBitmap. It should include channels,
+		// bitblitzing, masking, blending, and resizing.
+
 		for (auto i = 0; i < xw; i++) {
 			for (auto j = 0; j < yw; j++) {
-				switch (channels) {
-				case 1: {
-				} break;
-				case 2: {
-				} break;
-				case 3: {
+				if ((data[UI_INDEX(xw, i, j)] & 0xffffff) != mask) {
 					scr->pixels[UI_INDEX(scr->pitch, p.x + i, p.y + j)] = data[UI_INDEX(xw, i, j)];
-				} break;
-				case 4: {
-					// TODO: Alpha blending.
-					scr->pixels[UI_INDEX(scr->pitch, p.x + i, p.y + j)] = data[UI_INDEX(xw, i, j)];
-				} break;
-				default:
-					UIASSERT("Invalid channel quantity in UIBitmap");
 				}
-
 			}
 		}
 	}
 
 	int xw        = 0;
 	int yw        = 0;
-	int channels  = 3;
-	UIPixel mask  = UI_WHITE; // TODO: What's the best mask implementation?
+	UIPixel mask  = UI_GREEN; // TODO: What's the best mask implementation?
 	UIPixel* data = NULL;     // TODO: Should this me a unique pointer?
 };
 

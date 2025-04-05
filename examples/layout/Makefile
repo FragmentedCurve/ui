@@ -1,4 +1,4 @@
-PROG_CXX=	layout
-SRCS=		main.cc
-MAN=
-.include <bsd.prog.mk>
+PROG=	layout
+SRCS=	main.cc
+
+.include "../example.mk"

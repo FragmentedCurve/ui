@@ -16,6 +16,9 @@
 
 #pragma once
 
+// TODO: Implement UIVPercentFill and UIHPercentFill for filling a percentage of the area.
+// TODO: Implement UIHFill and UIVFill which will fill the length of their respective direction and keep the other direction fixed.
+
 struct UIFillBox : UIWidget {
 	UIFillBox(UIHandle id, UIRect r) : UIWidget(id, r) {
 		fill_screen = true;

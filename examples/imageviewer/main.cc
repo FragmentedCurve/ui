@@ -56,17 +56,15 @@ int UIMain(int argc, char** argv) {
 	((UIButton*)root->childtail)->icon = UIBitmap{
 		(int) icon_next.width,
 		(int) icon_next.height,
-		4,
-		UI_WHITE,
-		(UIPixel*) icon_next.pixel_data
+		UI_GREEN,
+		(UIPixel*) icon_prev.pixel_data
 	};
 
 	((UIButton*)root->childhead)->icon = UIBitmap{
 		(int) icon_prev.width,
 		(int) icon_prev.height,
-		4,
-		UI_WHITE,
-		(UIPixel*) icon_prev.pixel_data
+		UI_GREEN,
+		(UIPixel*) icon_next.pixel_data
 	};
 
 	while (s = UINativeState(), !s.halt) {

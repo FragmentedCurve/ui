@@ -1,32 +1,24 @@
-CXXFLAGS+=	-std=c++17 -Wall -pedantic -O2 -I ${.CURDIR}/src -I /usr/local/include
+CXXFLAGS+=	 -fPIC -std=c++17 -Wall -pedantic -I ${.CURDIR}/src -I /usr/local/include
 CXXFLAGS_amd64+=	-msse2 -mavx2
 CXXFLAGS+=	${CXXFLAGS_${MACHINE}}
-LDFLAGS+=	-L ${.CURDIR}/src -L /usr/local/lib
 
-.if "${:!which fetch!}" != ""
-FETCH?= fetch
-.elif "${:!which curl!}" != ""
-FETCH?= curl -O
-.elif "${:!which wget!}" != ""
-FETCH?= wget
+.ifdef DEBUG
+CXXFLAGS+=	-ggdb -pg -O0 -DUI_INTERNAL_DEBUG
 .else
-.error NO HTTP FETCH COMMAND FOUND
+CXXFLAGS+=	-O3 -s
 .endif
 
-.export CXXFLAGS
-.export LDFLAGS
-.export FETCH
+SRCS!=	find ${.CURDIR}/src/ -type f -depth 1 -name '*.cc' -or -name '*.h'
 
-all: build-all
+all: libui.o libui.so
 
-build:
-	${MAKE} -C ${.CURDIR}/src
+libui.o: ${SRCS}
+	${CXX} ${CXXFLAGS} -c -o libui.o ${.CURDIR}/src/build.cc
 
-build-all: build
-	${MAKE} -C ${.CURDIR}/examples
+libui.so: ${SRCS}
+	${CXX} ${CXXFLAGS} -shared -o libui.so ${.CURDIR}/src/build.cc
 
 clean:
-	${MAKE} -C ${.CURDIR}/src clean
-	${MAKE} -C ${.CURDIR}/examples clean
+	rm -f libui.so libui.o
 
-.PHONY: build build-all clean
+.PHONY: clean
