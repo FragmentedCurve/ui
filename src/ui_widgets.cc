@@ -109,6 +109,8 @@ void HexFloat::Draw(UIScreen* scr) {
 	}
 }
 
+#include <cstdio>
+
 void UIButton::Draw(UIScreen* scr) {
 	UIPixel hilite = UI_SURFACE_HILITE;
 	UIPixel shadow = UI_SURFACE_SHADOW;
@@ -142,8 +144,7 @@ void UIButton::Draw(UIScreen* scr) {
 	scr->DrawRect(UI_DARKEST, r);
 
 	if (icon.xw && icon.yw) {
-		// TODO: Draw center.
-		icon.Draw(scr, r.p.From(5, 5));
+		icon.Draw(scr, r.p.From((r.xw - icon.xw) / 2, (r.yw - icon.yw) / 2));
 	}
 
 	// TODO: Draw caption.
