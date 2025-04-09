@@ -36,7 +36,9 @@ struct UIPoint {
 	UIPoint From(int x, int y) { return From(UIPoint(x, y)); }
 };
 
+
 struct UIRect {
+	// TODO: Abstract UIRect into multiple classes for different polygon types.
 	UIPoint p;
 	int xw, yw;
 
@@ -330,7 +332,7 @@ struct UIRawInput {
 	UIPoint pointer       = UIPoint(0, 0);
 	UIPoint dpointer      = UIPoint(0, 0);
 	bool    m[32]         = {false};
-	char    keys[127]     = {0};
+	char    keys[127]     = {0}; // TODO: Correct size (and maybe type).
 	int     screen_width  = 0;
 	int     screen_height = 0;
 	bool    halt          = false;
@@ -339,6 +341,8 @@ struct UIRawInput {
 struct UIReaction  {
 	UIWidget* pressed = NULL;
 	UIWidget* clicked = NULL;
+	// TODO: Add fields for either widgets or an area that needs
+	// to be repainted and/or resized.
 };
 
 // Provided to the platform by UIPixelGrab
