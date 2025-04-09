@@ -1,5 +1,5 @@
 PROG=	imageviewer
-SRCS=		main.cc
+SRCS=		main.cc icon_next.c icon_prev.c
 CLEANFILES+=	stb_image.h stb_image_resize2.h
 
 main.cc: stb_image.h stb_image_resize2.h
